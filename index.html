@@ -1,0 +1,2342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>盘感盲测台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #E6E9E2;
+  --panel: #F3F4EF;
+  --ink: #17222D;
+  --ink-2: #56636D;
+  --rule: #C5CCC2;
+  --chart-bg: #FBFBF7;
+  --grid: rgba(23, 34, 45, 0.07);
+  --up: #1B8670;
+  --down: #C2432C;
+  --accent: #2A58A0;
+  --accent-soft: rgba(42, 88, 160, 0.12);
+  --curtain: #DDE2D8;
+  --hatch: rgba(23, 34, 45, 0.09);
+  --future: rgba(42, 88, 160, 0.05);
+  --font: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #14202B;
+    --panel: #1A2834;
+    --ink: #E3E8E1;
+    --ink-2: #9AA7B0;
+    --rule: #2D3E4C;
+    --chart-bg: #101B24;
+    --grid: rgba(227, 232, 225, 0.06);
+    --up: #3DB497;
+    --down: #E2694E;
+    --accent: #84AAE3;
+    --accent-soft: rgba(132, 170, 227, 0.14);
+    --curtain: #1C2B37;
+    --hatch: rgba(227, 232, 225, 0.07);
+    --future: rgba(132, 170, 227, 0.06);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14202B;
+  --panel: #1A2834;
+  --ink: #E3E8E1;
+  --ink-2: #9AA7B0;
+  --rule: #2D3E4C;
+  --chart-bg: #101B24;
+  --grid: rgba(227, 232, 225, 0.06);
+  --up: #3DB497;
+  --down: #E2694E;
+  --accent: #84AAE3;
+  --accent-soft: rgba(132, 170, 227, 0.14);
+  --curtain: #1C2B37;
+  --hatch: rgba(227, 232, 225, 0.07);
+  --future: rgba(132, 170, 227, 0.06);
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+html, body { height: 100%; margin: 0; }
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.app { height: 100%; display: flex; flex-direction: column; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--panel);
+}
+.brand { font-weight: 600; font-size: 15px; letter-spacing: 0.01em; }
+.dataset { color: var(--ink-2); font-size: 13px; }
+.progress { color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.progress b { color: var(--ink); font-weight: 600; }
+.spacer { flex: 1; }
+.btn {
+  border: 1px solid var(--rule); background: transparent; border-radius: 6px;
+  padding: 5px 12px; cursor: pointer; font-size: 13px;
+}
+.btn:hover { background: var(--accent-soft); }
+.btn.primary { background: var(--ink); color: var(--chart-bg); border-color: var(--ink); }
+.btn.primary:hover { opacity: 0.9; }
+
+/* ---------- setup ---------- */
+.setup { flex: 1; overflow: auto; }
+.setup-inner { max-width: 640px; margin: 0 auto; padding: 56px 24px 64px; }
+.setup h1 { font-size: 34px; line-height: 1.2; font-weight: 600; margin: 0 0 16px; letter-spacing: -0.01em; }
+.setup p { margin: 0 0 14px; color: var(--ink-2); max-width: 36em; }
+.drop {
+  margin: 28px 0 16px; padding: 28px 24px; border: 1.5px dashed var(--rule); border-radius: 10px;
+  background: var(--panel); text-align: left;
+}
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.drop .formats { font-size: 13px; color: var(--ink-2); margin: 0 0 16px; }
+.drop .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.load-status { margin-top: 14px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.load-status.error { color: var(--down); }
+.loadbar { height: 4px; background: var(--rule); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.loadbar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.setup .note { font-size: 13px; }
+
+/* ---------- workbench ---------- */
+.quiz { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.workbench { flex: 1; min-height: 0; display: grid; grid-template-columns: 52px 1fr; }
+.tools {
+  display: flex; flex-direction: column; gap: 4px; padding: 8px 6px;
+  border-right: 1px solid var(--rule); background: var(--panel);
+}
+.tool {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  cursor: pointer; color: var(--ink-2); padding: 0;
+}
+.tool:hover { background: var(--accent-soft); color: var(--ink); }
+.tool[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.tool svg { width: 20px; height: 20px; }
+.tools hr { width: 28px; border: 0; border-top: 1px solid var(--rule); margin: 6px auto; }
+.stage { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.chart-wrap { position: relative; flex: 1; min-height: 260px; background: var(--chart-bg); }
+#chart { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; display: block; }
+.strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px;
+  padding: 8px 12px; border-top: 1px solid var(--rule); background: var(--panel); font-size: 13px;
+}
+.strip .label { color: var(--ink-2); margin-right: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; vertical-align: middle; }
+.seg button { border: 0; background: transparent; padding: 3px 10px; cursor: pointer; font-size: 13px; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--chart-bg); }
+.chips { display: inline-flex; flex-wrap: wrap; gap: 6px; vertical-align: middle; }
+.chip {
+  border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px;
+  background: transparent; cursor: pointer; color: var(--ink-2); font-size: 13px;
+}
+.chip[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: var(--accent-soft); }
+
+/* ---------- decision bar ---------- */
+.decide {
+  display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center;
+  padding: 12px 16px; border-top: 1px solid var(--rule); background: var(--panel);
+}
+.keys { display: flex; gap: 10px; }
+.key {
+  min-width: 118px; padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--rule); background: var(--chart-bg);
+  cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-size: 17px; font-weight: 600; box-shadow: 0 3px 0 var(--rule);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+.key:active, .key.hit { transform: translateY(3px); box-shadow: 0 0 0 var(--rule); }
+.key kbd {
+  font: 500 12px var(--font); color: var(--ink-2);
+  border: 1px solid var(--rule); border-radius: 4px; padding: 0 6px; background: var(--panel);
+}
+.key.short { color: var(--down); }
+.key.long { color: var(--up); }
+.key.skip { color: var(--ink-2); }
+.conf { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.note-input {
+  flex: 1; min-width: 160px; max-width: 360px; padding: 6px 10px;
+  border: 1px solid var(--rule); border-radius: 6px; background: var(--chart-bg); font-size: 13px;
+}
+.result { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; flex: 1; }
+.result .verdict { font-weight: 600; font-size: 15px; }
+.result .h { font-variant-numeric: tabular-nums; font-size: 14px; }
+.result .h span { color: var(--ink-2); margin-right: 6px; }
+.pos { color: var(--up); }
+.neg { color: var(--down); }
+.muted { color: var(--ink-2); }
+
+/* ---------- stats ---------- */
+.stats { flex: 1; overflow: auto; }
+.stats-inner { max-width: 980px; margin: 0 auto; padding: 32px 24px 64px; }
+.stats h2 { font-size: 22px; font-weight: 600; margin: 0 0 8px; }
+.stats h3 { font-size: 15px; font-weight: 600; margin: 28px 0 8px; }
+.stats p { color: var(--ink-2); margin: 0 0 12px; max-width: 46em; }
+.stats .summary { font-size: 15px; color: var(--ink); margin: 14px 0 4px; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-weight: 500; color: var(--ink-2); background: var(--bg); }
+tbody tr:last-child td { border-bottom: 0; }
+.stats .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+
+/* ---------- dialogs ---------- */
+dialog {
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--panel); color: var(--ink);
+  padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px);
+}
+dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
+.dlg { padding: 20px 22px; overflow: auto; max-height: calc(100vh - 48px); }
+.dlg h2 { margin: 0 0 14px; font-size: 17px; font-weight: 600; }
+.field { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; margin: 10px 0; font-size: 13px; }
+.field label { color: var(--ink-2); }
+.field input[type="text"], .field input[type="number"], .field select {
+  padding: 5px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--chart-bg); width: 100%;
+}
+.field .hint { grid-column: 2; font-size: 12px; color: var(--ink-2); margin-top: -6px; }
+.dlg .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.dlg textarea {
+  width: 100%; height: 260px; font: 12px/1.4 var(--font); border: 1px solid var(--rule);
+  border-radius: 6px; background: var(--chart-bg); padding: 8px;
+}
+.toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--chart-bg); padding: 8px 14px; border-radius: 6px; font-size: 13px;
+  pointer-events: none;
+}
+
+/* ---------- datasets kept in the browser ---------- */
+.saved { margin: 28px 0 0; }
+.saved h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+.saved-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--rule); border-radius: 10px; background: var(--panel); }
+.saved-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.saved-list li:last-child { border-bottom: 0; }
+.saved-list .info { flex: 1; min-width: 200px; }
+.saved-list .info b { display: block; font-weight: 600; word-break: break-all; }
+.saved-list .info span { font-size: 13px; color: var(--ink-2); }
+.saved-list .act { display: flex; gap: 8px; }
+.saved-note { font-size: 13px; color: var(--ink-2); margin: 8px 0 0; }
+.keep { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); margin-top: 14px; cursor: pointer; }
+.keep input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+
+/* phones in portrait, narrow tablets */
+@media (max-width: 760px) {
+  .topbar { gap: 6px 10px; padding: 8px 12px; }
+  .dataset { display: none; }
+  .progress .more { display: none; }
+  .btn { padding: 5px 10px; }
+  .workbench { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .tools { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--rule); overflow-x: auto; padding: 4px 8px; gap: 2px; }
+  .tool { flex: none; width: 42px; height: 38px; }
+  .tools hr { width: 0; height: 24px; border-top: 0; border-left: 1px solid var(--rule); margin: auto 6px; }
+  .chart-wrap { min-height: 220px; }
+  .strip { flex-wrap: nowrap; overflow-x: auto; gap: 14px; padding: 6px 10px; scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+  .strip > span { flex: none; }
+  .chips { flex-wrap: nowrap; }
+  .decide { gap: 8px 12px; padding: 10px 12px; }
+  .keys { width: 100%; }
+  .key { flex: 1; min-width: 0; justify-content: center; padding: 12px 6px; }
+  .note-input { display: none; }
+  .result { gap: 2px 14px; }
+  .result .verdict { width: 100%; font-size: 14px; }
+  .result .h { font-size: 13px; }
+  #resultBar .btn.primary { width: 100%; padding: 10px; font-size: 15px; }
+  .field { grid-template-columns: 1fr; }
+  .field .hint { grid-column: 1; }
+  .setup-inner { padding-top: 32px; }
+  .setup h1 { font-size: 28px; }
+}
+/* phones held sideways: keep the chart as tall as possible */
+@media (max-height: 540px) and (orientation: landscape) {
+  .topbar { padding: 4px 12px; }
+  .dataset { display: none; }
+  .progress .more { display: none; }
+  .workbench { grid-template-columns: 48px 1fr; grid-template-rows: none; }
+  .tools { flex-direction: column; overflow-x: hidden; overflow-y: auto; border-right: 1px solid var(--rule); border-bottom: 0; padding: 4px; }
+  .tool { width: 38px; height: 34px; }
+  .tools hr { width: 26px; height: 0; border-left: 0; border-top: 1px solid var(--rule); margin: 4px auto; }
+  .chart-wrap { min-height: 140px; }
+  .strip { flex-wrap: nowrap; overflow-x: auto; padding: 4px 10px; scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+  .strip > span { flex: none; }
+  .chips { flex-wrap: nowrap; }
+  .decide { padding: 6px 12px; gap: 6px 12px; flex-wrap: nowrap; }
+  .keys { width: auto; flex: 1; }
+  .key { flex: 1; min-width: 0; padding: 7px 8px; font-size: 15px; justify-content: center; }
+  .note-input, #btnUndoLabel { display: none; }
+  #resultBar .btn.primary { width: auto; }
+}
+/* touch screens have no keyboard shortcuts to show */
+@media (hover: none) {
+  .key kbd, .kb { display: none; }
+}
+/* bigger touch targets for fingers */
+@media (pointer: coarse) {
+  .chip { padding: 5px 12px; }
+  .seg button { padding: 6px 12px; }
+  .key { min-height: 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .key { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <span class="brand">盘感盲测台</span>
+    <span class="dataset" id="datasetName"></span>
+    <span class="progress" id="progress" hidden></span>
+    <span class="spacer"></span>
+    <button class="btn" id="btnQuiz" hidden>返回答题</button>
+    <button class="btn" id="btnStats" hidden>统计</button>
+    <button class="btn" id="btnSettings">设置</button>
+    <button class="btn" id="btnData" hidden>换数据</button>
+  </header>
+
+  <!-- ===== setup ===== -->
+  <main class="setup" id="setupView">
+    <div class="setup-inner">
+      <h1>先验证盘感，再谈规则</h1>
+      <p>从历史 M1 数据里随机抽一个时刻，只给你看到这一刻为止的走势，日期隐藏。你判断做多、做空或不做，系统记下来；攒够几百题后，统计你的判断扣掉成本后还剩多少。</p>
+      <p>每题的入场价是决策那根 K 线之后下一根的开盘中间价，结果按 15、30、60 分钟后的中间价计算，成本 = 入场和出场点差的一半之和 + 两边滑点。</p>
+      <section class="saved" id="savedBox" hidden>
+        <h2>保存在这个浏览器里的数据</h2>
+        <ul class="saved-list" id="savedList"></ul>
+        <p class="saved-note" id="storageNote"></p>
+      </section>
+      <div class="drop" id="drop">
+        <h2>选择 M1 数据文件</h2>
+        <p class="formats">支持 MT5 导出的 CSV（&lt;DATE&gt; &lt;TIME&gt; &lt;OPEN&gt; &lt;HIGH&gt; &lt;LOW&gt; &lt;CLOSE&gt; &lt;TICKVOL&gt; &lt;VOL&gt; &lt;SPREAD&gt;），也支持 pandas 导出的 time, open, high, low, close, tick_volume, spread。价格按 bid 处理，点差按 points。文件只在你的浏览器里读取，不会上传。</p>
+        <div class="row">
+          <input type="file" id="fileInput" accept=".csv,.txt,text/csv" hidden>
+          <button class="btn primary" id="btnPick">选择文件</button>
+          <button class="btn" id="btnDemo">用模拟数据试用</button>
+          <span class="muted note">也可以把文件拖到这里</span>
+        </div>
+        <label class="keep"><input type="checkbox" id="keepData" checked>读取后保存到这个浏览器，下次不用再选文件</label>
+        <div class="load-status" id="loadStatus" hidden></div>
+        <div class="loadbar" id="loadBar" hidden><i></i></div>
+      </div>
+      <p class="note">模拟数据是随机游走，只用来熟悉操作，统计结果没有意义。抽题方式、滑点和时段过滤在右上角的“设置”里调整。</p>
+    </div>
+  </main>
+
+  <!-- ===== quiz ===== -->
+  <main class="quiz" id="quizView" hidden>
+    <div class="workbench">
+      <nav class="tools" aria-label="绘图工具">
+        <button class="tool" data-tool="select" aria-pressed="true" title="选择与平移（V）" aria-label="选择与平移">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 3l10 6-4.5 1.2L8.5 15z"/></svg>
+        </button>
+        <button class="tool" data-tool="trend" aria-pressed="false" title="趋势线（T）" aria-label="趋势线">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 15L16 5"/><circle cx="4" cy="15" r="1.8" fill="currentColor"/><circle cx="16" cy="5" r="1.8" fill="currentColor"/></svg>
+        </button>
+        <button class="tool" data-tool="hline" aria-pressed="false" title="水平线（H）" aria-label="水平线">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10h16"/></svg>
+        </button>
+        <button class="tool" data-tool="fib" aria-pressed="false" title="斐波那契回撤（F）" aria-label="斐波那契回撤">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 4h14M3 8h14M3 11h14M3 13.5h14M3 16h14"/><path d="M4 16L16 4" stroke-dasharray="2 2"/></svg>
+        </button>
+        <hr>
+        <button class="tool" id="btnDelDrawing" title="删除选中的图形（Delete）" aria-label="删除选中的图形">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
+        </button>
+        <button class="tool" id="btnClearDrawings" title="清除本题所有图形" aria-label="清除本题所有图形">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+        </button>
+      </nav>
+      <section class="stage">
+        <div class="chart-wrap">
+          <canvas id="chart" role="img" aria-label="当前题目的 K 线图，决策时刻之后的走势被遮住"></canvas>
+        </div>
+        <div class="strip">
+          <span><span class="label">周期</span>
+            <span class="seg" id="tfSeg">
+              <button data-tf="1" aria-pressed="true">M1</button><button data-tf="5" aria-pressed="false">M5</button><button data-tf="15" aria-pressed="false">M15</button>
+            </span>
+          </span>
+          <span><span class="label">指标</span>
+            <span class="chips" id="indChips">
+              <button class="chip" data-ind="ema20">EMA 20</button>
+              <button class="chip" data-ind="ema50">EMA 50</button>
+              <button class="chip" data-ind="bb">布林带 20, 2</button>
+              <button class="chip" data-ind="vol">成交量</button>
+              <button class="chip" data-ind="rsi">RSI 14</button>
+              <button class="chip" data-ind="macd">MACD 12, 26, 9</button>
+              <button class="chip" data-ind="stops">止盈止损线</button>
+            </span>
+          </span>
+          <span><span class="label">缩放</span>
+            <span class="seg"><button id="zoomOut" aria-label="缩小">−</button><button id="zoomIn" aria-label="放大">+</button></span>
+          </span>
+          <span><button class="chip" id="magnet" aria-pressed="true" title="画线时吸附到最近的开高低收">吸附</button></span>
+        </div>
+        <div class="decide" id="decideBar">
+          <div class="keys" id="keys">
+            <button class="key short" data-dir="-1">做空<kbd>S</kbd></button>
+            <button class="key skip" data-dir="0">不做<kbd>N</kbd></button>
+            <button class="key long" data-dir="1">做多<kbd>L</kbd></button>
+          </div>
+          <div class="conf">
+            <span>把握</span>
+            <span class="seg" id="confSeg">
+              <button data-conf="1" aria-pressed="false">1</button><button data-conf="2" aria-pressed="true">2</button><button data-conf="3" aria-pressed="false">3</button>
+            </span>
+          </div>
+          <input class="note-input" id="noteInput" type="text" placeholder="备注（可选，按 / 聚焦）" aria-label="备注">
+          <button class="btn" id="btnUndoLabel" title="删除最近一条记录">删除上一条</button>
+        </div>
+        <div class="decide" id="resultBar" hidden>
+          <div class="result" id="resultBox"></div>
+          <button class="btn primary" id="btnNext">下一题<span class="kb">（Enter）</span></button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===== stats ===== -->
+  <main class="stats" id="statsView" hidden>
+    <div class="stats-inner" id="statsInner"></div>
+  </main>
+</div>
+
+<!-- settings dialog -->
+<dialog id="settingsDlg" aria-labelledby="settingsTitle">
+  <form class="dlg" method="dialog" id="settingsForm">
+    <h2 id="settingsTitle">设置</h2>
+    <div class="field"><label for="sMode">抽题方式</label>
+      <select id="sMode"><option value="random">随机时刻</option><option value="spike">只抽急涨急跌</option></select></div>
+    <div class="field"><label for="sW">急涨急跌窗口（分钟）</label><input id="sW" type="number" min="3" max="120" step="1"></div>
+    <div class="field"><label for="sK">急涨急跌阈值（倍标准差）</label><input id="sK" type="number" min="1" max="10" step="0.5">
+      <div class="hint">窗口内的价格变动超过过去 24 小时同长度变动标准差的这个倍数，才算一次急涨或急跌。</div></div>
+    <div class="field"><label for="sHours">只抽这些服务器小时</label><input id="sHours" type="text" placeholder="留空表示全部，例如 2-4, 10-12">
+      <div class="hint">按 K 线的服务器时间计算，0–23。</div></div>
+    <div class="field"><label for="sSlip">每边滑点（pip）</label><input id="sSlip" type="number" min="0" max="5" step="0.05"></div>
+    <div class="field"><label for="sStopMode">止盈止损方式</label>
+      <select id="sStopMode"><option value="atr">按 ATR 倍数</option><option value="pips">固定 pip</option></select></div>
+    <div class="field"><label for="sAtrTf">ATR 所用周期</label>
+      <select id="sAtrTf"><option value="1">M1</option><option value="5">M5</option><option value="15">M15</option></select>
+      <div class="hint">ATR 14，用决策时刻已经收盘的 K 线计算。</div></div>
+    <div class="field"><label for="sTpMult">止盈 = ATR ×</label><input id="sTpMult" type="number" min="0.1" max="20" step="0.1"></div>
+    <div class="field"><label for="sSlMult">止损 = ATR ×</label><input id="sSlMult" type="number" min="0.1" max="20" step="0.1"></div>
+    <div class="field"><label for="sTp">固定止盈（pip）</label><input id="sTp" type="number" min="1" max="200" step="0.5"></div>
+    <div class="field"><label for="sSl">固定止损（pip）</label><input id="sSl" type="number" min="1" max="200" step="0.5">
+      <div class="hint">从入场成交价算起，最长持有 60 分钟。先定好再看结果，不要根据结果反复调整。</div></div>
+    <div class="field"><label for="sPip">1 pip 的价格</label><input id="sPip" type="text" placeholder="自动"></div>
+    <div class="field"><label for="sPoint">1 point 的价格</label><input id="sPoint" type="text" placeholder="自动">
+      <div class="hint">点差列的单位。USDJPY 通常是 0.001，GBPUSD 通常是 0.00001。</div></div>
+    <div class="field"><label for="sVisible">默认显示 K 线数</label><input id="sVisible" type="number" min="30" max="800" step="10"></div>
+    <div class="field"><label for="sShowTime">显示时刻</label>
+      <select id="sShowTime"><option value="1">显示服务器时刻（不含日期）</option><option value="0">只显示相对决策时刻的分钟数</option></select></div>
+    <div class="field"><label for="sReveal">答题后</label>
+      <select id="sReveal"><option value="1">揭晓后续走势和结果</option><option value="0">直接进入下一题</option></select></div>
+    <div class="actions">
+      <button class="btn" value="cancel" formnovalidate>取消</button>
+      <button class="btn primary" value="ok" id="settingsOk">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- export fallback dialog -->
+<dialog id="exportDlg" aria-labelledby="exportTitle">
+  <form class="dlg" method="dialog">
+    <h2 id="exportTitle">复制标注数据</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px">这里无法直接下载文件。全选下面的内容，复制后保存为 .csv 文件即可。</p>
+    <textarea id="exportText" readonly></textarea>
+    <div class="actions"><button class="btn primary" value="ok">关闭</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ============================================================
+   Core: parsing, sampling, outcomes, indicators (no DOM)
+   ============================================================ */
+window.BlindCore = (() => {
+  'use strict';
+  const HS = [15, 30, 60];
+  const HMAX = 60;
+
+  class Col {
+    constructor(T, cap) { this.T = T; this.a = new T(cap || 65536); this.n = 0; }
+    push(v) {
+      if (this.n === this.a.length) { const b = new this.T(this.a.length * 2); b.set(this.a); this.a = b; }
+      this.a[this.n++] = v;
+    }
+    done() { return this.a.slice(0, this.n); }
+  }
+
+  const isDigit = (c) => c >= 48 && c <= 57;
+
+  function parseDay(s) {
+    s = s.trim();
+    let y, mo, d;
+    if (s.length >= 10 && isDigit(s.charCodeAt(0)) && !isDigit(s.charCodeAt(4)) && !isDigit(s.charCodeAt(7))) {
+      y = +s.slice(0, 4); mo = +s.slice(5, 7); d = +s.slice(8, 10);
+    } else {
+      const r = /(\d{4})\D(\d{1,2})\D(\d{1,2})/.exec(s);
+      if (!r) return NaN;
+      y = +r[1]; mo = +r[2]; d = +r[3];
+    }
+    return Date.UTC(y, mo - 1, d) / 1000;
+  }
+
+  function parseTod(s) {
+    s = s.trim();
+    if (s.length >= 5 && s.charCodeAt(2) === 58) {
+      const h = +s.slice(0, 2), mi = +s.slice(3, 5);
+      const se = (s.length >= 8 && s.charCodeAt(5) === 58) ? +s.slice(6, 8) : 0;
+      return h * 3600 + mi * 60 + se;
+    }
+    const r = /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(s);
+    if (!r) return NaN;
+    return +r[1] * 3600 + +r[2] * 60 + (r[3] ? +r[3] : 0);
+  }
+
+  function parseStamp(s) {
+    s = s.trim();
+    if (/^\d+(\.\d+)?$/.test(s)) {
+      let v = +s;
+      if (v > 1e11) v = v / 1000;
+      return Math.floor(v);
+    }
+    const day = parseDay(s);
+    if (isNaN(day)) return NaN;
+    const sp = s.search(/[ T]/);
+    if (sp < 0) return day;
+    const tod = parseTod(s.slice(sp + 1));
+    return day + (isNaN(tod) ? 0 : tod);
+  }
+
+  function normName(s) {
+    return s.trim().replace(/^"|"$/g, '').replace(/^<|>$/g, '').toLowerCase().replace(/[\s_\-]/g, '');
+  }
+
+  function mapHeader(fields) {
+    const m = {};
+    fields.forEach((f, i) => {
+      const k = normName(f);
+      if (k === 'date') m.date = i;
+      else if (k === 'time') m.time = i;
+      else if (k === 'datetime' || k === 'timestamp') m.datetime = i;
+      else if (k === 'open') m.open = i;
+      else if (k === 'high') m.high = i;
+      else if (k === 'low') m.low = i;
+      else if (k === 'close') m.close = i;
+      else if (k === 'tickvol' || k === 'tickvolume' || k === 'ticks') m.tickvol = i;
+      else if (k === 'vol' || k === 'volume' || k === 'realvolume') { if (m.vol == null) m.vol = i; }
+      else if (k === 'spread') m.spread = i;
+    });
+    if (m.date == null && m.time != null && m.datetime == null) { m.datetime = m.time; delete m.time; }
+    return m;
+  }
+
+  function guessNoHeader(f) {
+    if (f.length >= 6 && /:/.test(f[1])) {
+      return { date: 0, time: 1, open: 2, high: 3, low: 4, close: 5, tickvol: f.length > 6 ? 6 : undefined, vol: f.length > 7 ? 7 : undefined, spread: f.length > 8 ? 8 : undefined };
+    }
+    return { datetime: 0, open: 1, high: 2, low: 3, close: 4, tickvol: f.length > 5 ? 5 : undefined, spread: f.length > 6 ? 6 : undefined };
+  }
+
+  function detectDelim(line) {
+    const c = { '\t': 0, ',': 0, ';': 0 };
+    for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch in c) c[ch]++; }
+    let best = null, bv = 0;
+    for (const k in c) if (c[k] > bv) { bv = c[k]; best = k; }
+    return best || /\s+/;
+  }
+
+  async function parseFile(file, onProgress) {
+    const cols = {
+      time: new Col(Float64Array), open: new Col(Float64Array), high: new Col(Float64Array),
+      low: new Col(Float64Array), close: new Col(Float64Array), vol: new Col(Float32Array), spread: new Col(Float32Array)
+    };
+    let m = null, delim = null, started = false, lastT = -Infinity, skipped = 0;
+
+    const handle = (line) => {
+      if (!line) return;
+      if (line.charCodeAt(line.length - 1) === 13) line = line.slice(0, -1);
+      if (!line.trim()) return;
+      if (!started) {
+        delim = detectDelim(line);
+        const f0 = line.split(delim);
+        started = true;
+        if (f0.some((x) => /^["<_A-Za-z]/.test(x.trim()))) {
+          m = mapHeader(f0);
+          if (m.open == null || m.high == null || m.low == null || m.close == null || (m.datetime == null && (m.date == null || m.time == null))) {
+            throw new Error('表头里找不到时间或开高低收列，请确认是 M1 K 线数据。');
+          }
+          return;
+        }
+        m = guessNoHeader(f0);
+      }
+      const f = line.split(delim);
+      const ts = m.datetime != null ? parseStamp(f[m.datetime] || '') : parseDay(f[m.date] || '') + parseTod(f[m.time] || '');
+      const o = +f[m.open], h = +f[m.high], l = +f[m.low], c = +f[m.close];
+      if (!(ts > lastT) || !(o > 0) || !(h > 0) || !(l > 0) || !(c > 0)) { skipped++; return; }
+      lastT = ts;
+      cols.time.push(ts); cols.open.push(o); cols.high.push(h); cols.low.push(l); cols.close.push(c);
+      const v = m.tickvol != null ? +f[m.tickvol] : (m.vol != null ? +f[m.vol] : 0);
+      cols.vol.push(isFinite(v) ? v : 0);
+      const sp = m.spread != null ? +f[m.spread] : 0;
+      cols.spread.push(isFinite(sp) ? sp : 0);
+    };
+
+    const total = file.size || 1;
+    const reader = file.stream().getReader();
+    let dec = null, carry = '', read = 0, lastYield = 0;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!dec) {
+        let enc = 'utf-8';
+        if (value.length >= 2 && value[0] === 0xFF && value[1] === 0xFE) enc = 'utf-16le';
+        else if (value.length >= 4 && value[1] === 0 && value[3] === 0) enc = 'utf-16le';
+        dec = new TextDecoder(enc);
+      }
+      read += value.length;
+      const text = carry + dec.decode(value, { stream: true });
+      const parts = text.split('\n');
+      carry = parts.pop();
+      for (let i = 0; i < parts.length; i++) handle(parts[i]);
+      if (read - lastYield > 4e6) {
+        lastYield = read;
+        if (onProgress) onProgress(read / total);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+    if (dec) carry += dec.decode();
+    carry.split('\n').forEach(handle);
+    if (onProgress) onProgress(1);
+    if (!m) throw new Error('文件是空的。');
+    const D = {
+      time: cols.time.done(), open: cols.open.done(), high: cols.high.done(), low: cols.low.done(),
+      close: cols.close.done(), vol: cols.vol.done(), spread: cols.spread.done()
+    };
+    D.n = D.time.length;
+    D.hasSpread = m.spread != null;
+    D.hasVol = m.tickvol != null || m.vol != null;
+    D.skipped = skipped;
+    return D;
+  }
+
+  function inferMeta(D) {
+    const step = Math.max(1, Math.floor(D.n / 4000));
+    const px = [], dt = [];
+    for (let i = 1; i < D.n; i += step) { px.push(D.close[i]); dt.push(D.time[i] - D.time[i - 1]); }
+    px.sort((a, b) => a - b); dt.sort((a, b) => a - b);
+    const med = px[px.length >> 1] || 0;
+    const jpy = med > 20;
+    return { pip: jpy ? 0.01 : 0.0001, point: jpy ? 0.001 : 0.00001, medianClose: med, medianStep: dt[dt.length >> 1] || 0 };
+  }
+
+  function parseHours(s) {
+    if (!s || !s.trim()) return null;
+    const set = new Set();
+    s.split(/[,，\s]+/).forEach((part) => {
+      if (!part) return;
+      const r = /^(\d{1,2})(?:-(\d{1,2}))?$/.exec(part.trim());
+      if (!r) return;
+      const a = +r[1], b = r[2] != null ? +r[2] : a;
+      if (a > 23 || b > 23) return;
+      if (a <= b) { for (let h = a; h <= b; h++) set.add(h); }
+      else { for (let h = a; h <= 23; h++) set.add(h); for (let h = 0; h <= b; h++) set.add(h); }
+    });
+    return set.size ? set : null;
+  }
+
+  function hourOf(ts) { return Math.floor((((ts % 86400) + 86400) % 86400) / 3600); }
+
+  function eligible(D, t, cfg) {
+    if (t < cfg.minLook || t + 1 + HMAX >= D.n) return false;
+    const T = D.time;
+    if (T[t + 1] - T[t] !== 60) return false;
+    if (T[t + 1 + HMAX] - T[t + 1] !== HMAX * 60) return false;
+    if (T[t] - T[t - 30] >= 3600) return false;
+    if (cfg.hours && !cfg.hours.has(hourOf(T[t]))) return false;
+    return true;
+  }
+
+  function spikeCtx(D, t, W, k) {
+    const C = D.close;
+    if (t - W < 0) return 0;
+    const move = C[t] - C[t - W];
+    const lo = Math.max(W, t - 1440);
+    let s = 0, s2 = 0, m = 0;
+    for (let i = t - W; i >= lo; i -= W) { const d = C[i] - C[i - W]; s += d; s2 += d * d; m++; }
+    if (m < 12) return 0;
+    const mean = s / m;
+    const sd = Math.sqrt(Math.max(s2 / m - mean * mean, 0));
+    if (!(sd > 0)) return 0;
+    if (move >= k * sd) return 1;
+    if (move <= -k * sd) return -1;
+    return 0;
+  }
+
+  function sample(D, cfg, used, maxTries) {
+    const span = D.n - cfg.minLook - HMAX - 2;
+    if (span <= 0) return null;
+    const tries = maxTries || 400000;
+    for (let a = 0; a < tries; a++) {
+      const t = cfg.minLook + Math.floor(Math.random() * span);
+      if (!eligible(D, t, cfg)) continue;
+      let ctx = 0;
+      if (cfg.mode === 'spike') { ctx = spikeCtx(D, t, cfg.W, cfg.k); if (!ctx) continue; }
+      let near = false;
+      for (let j = 0; j < used.length; j++) { if (Math.abs(used[j] - t) < cfg.spacing) { near = true; break; } }
+      if (near) continue;
+      return { t, ctx };
+    }
+    return null;
+  }
+
+  function longGross(D, t, h, pip, point) {
+    const e = t + 1, x = t + 1 + h;
+    const mE = D.open[e] + D.spread[e] * point / 2;
+    const mX = D.open[x] + D.spread[x] * point / 2;
+    return (mX - mE) / pip;
+  }
+
+  function costPips(D, t, h, pip, point, slip) {
+    return (D.spread[t + 1] + D.spread[t + 1 + h]) * point / 2 / pip + 2 * slip;
+  }
+
+  function baseline(D, cfg, pip, point, nSamp) {
+    const want = nSamp || 3000;
+    const acc = new Map();
+    const span = D.n - cfg.minLook - HMAX - 2;
+    let got = 0;
+    if (span > 0) {
+      for (let a = 0; a < 400000 && got < want; a++) {
+        const t = cfg.minLook + Math.floor(Math.random() * span);
+        if (!eligible(D, t, cfg)) continue;
+        let ctx = 0;
+        if (cfg.mode === 'spike') { ctx = spikeCtx(D, t, cfg.W, cfg.k); if (!ctx) continue; }
+        let e = acc.get(ctx);
+        if (!e) { e = { n: 0, s: HS.map(() => 0) }; acc.set(ctx, e); }
+        for (let j = 0; j < HS.length; j++) e.s[j] += longGross(D, t, HS[j], pip, point);
+        e.n++; got++;
+      }
+    }
+    const mu = new Map();
+    acc.forEach((e, ctx) => mu.set(ctx, { n: e.n, m: e.s.map((v) => v / e.n) }));
+    return { mu, n: got };
+  }
+
+  function barrier(D, t, dir, tp, sl, pip, point, slip) {
+    // tp / sl in pips from the entry fill; longs close at bid, shorts at ask; same bar touching both counts as stop
+    const e = t + 1, end = Math.min(D.n - 1, t + 1 + HMAX);
+    const sp = (j) => D.spread[j] * point;
+    const entry = dir === 1 ? D.open[e] + sp(e) + slip * pip : D.open[e] - slip * pip;
+    const tpPx = entry + dir * tp * pip, slPx = entry - dir * sl * pip;
+    let mfe = 0, mae = 0, exitPx = NaN, how = '', exitJ = -1;
+    for (let j = e; j < end; j++) {
+      const adj = dir === 1 ? 0 : sp(j);
+      const o = D.open[j] + adj, hi = D.high[j] + adj, lo = D.low[j] + adj;
+      const fav = dir === 1 ? hi - entry : entry - lo;
+      const adv = dir === 1 ? entry - lo : hi - entry;
+      if (fav > mfe) mfe = fav;
+      if (adv > mae) mae = adv;
+      if (how) continue;
+      if (dir === 1) {
+        if (o <= slPx) { exitPx = o - slip * pip; how = 'sl'; }
+        else if (lo <= slPx) { exitPx = slPx - slip * pip; how = 'sl'; }
+        else if (o >= tpPx) { exitPx = o; how = 'tp'; }
+        else if (hi >= tpPx) { exitPx = tpPx; how = 'tp'; }
+      } else {
+        if (o >= slPx) { exitPx = o + slip * pip; how = 'sl'; }
+        else if (hi >= slPx) { exitPx = slPx + slip * pip; how = 'sl'; }
+        else if (o <= tpPx) { exitPx = o; how = 'tp'; }
+        else if (lo <= tpPx) { exitPx = tpPx; how = 'tp'; }
+      }
+      if (how) exitJ = j;
+    }
+    if (!how) { exitPx = D.open[end] + (dir === 1 ? 0 : sp(end)) - dir * slip * pip; how = 'time'; exitJ = end; }
+    const pips = dir * (exitPx - entry) / pip;
+    return { how, pips, r: pips / sl, mfe: mfe / pip, mae: mae / pip, entry, exitPx, exitJ };
+  }
+
+  function atrAt(D, t, tf, p) {
+    // ATR (simple average of true range) over the last p bars of timeframe tf that are closed at bar t
+    const B = buildBars(D, t, tf, p + 2);
+    let n = B.n;
+    if (n > 0 && D.time[t] + 60 < B.time[n - 1] + tf * 60) n--;
+    if (n < p + 1) return NaN;
+    let s = 0;
+    for (let i = n - p; i < n; i++) s += Math.max(B.high[i] - B.low[i], Math.abs(B.high[i] - B.close[i - 1]), Math.abs(B.low[i] - B.close[i - 1]));
+    return s / p;
+  }
+
+  function summarize(a) {
+    const n = a.length;
+    if (!n) return { n: 0 };
+    let s = 0;
+    for (let i = 0; i < n; i++) s += a[i];
+    const mean = s / n;
+    let s2 = 0;
+    for (let i = 0; i < n; i++) s2 += (a[i] - mean) * (a[i] - mean);
+    const sd = n > 1 ? Math.sqrt(s2 / (n - 1)) : NaN;
+    const t = n > 1 && sd > 0 ? mean / (sd / Math.sqrt(n)) : NaN;
+    let w = 0;
+    for (let i = 0; i < n; i++) if (a[i] > 0) w++;
+    let lo = NaN, hi = NaN;
+    if (n >= 10) {
+      const B = 1000, ms = new Float64Array(B);
+      for (let b = 0; b < B; b++) {
+        let ss = 0;
+        for (let j = 0; j < n; j++) ss += a[(Math.random() * n) | 0];
+        ms[b] = ss / n;
+      }
+      ms.sort();
+      lo = ms[24]; hi = ms[974];
+    }
+    return { n, mean, sd, t, win: w / n, lo, hi };
+  }
+
+  function buildBars(D, endIdx, tf, count) {
+    const step = tf * 60;
+    const T = new Float64Array(count), O = new Float64Array(count), H = new Float64Array(count);
+    const L = new Float64Array(count), Cc = new Float64Array(count), V = new Float64Array(count);
+    const LAST = new Int32Array(count), FIRST = new Int32Array(count);
+    let k = count, i = Math.min(endIdx, D.n - 1);
+    while (i >= 0 && k > 0) {
+      const b = Math.floor(D.time[i] / step);
+      let h = -Infinity, l = Infinity, v = 0, o = D.open[i];
+      const c = D.close[i], last = i;
+      while (i >= 0 && Math.floor(D.time[i] / step) === b) {
+        o = D.open[i];
+        if (D.high[i] > h) h = D.high[i];
+        if (D.low[i] < l) l = D.low[i];
+        v += D.vol[i];
+        i--;
+      }
+      k--;
+      T[k] = b * step; O[k] = o; H[k] = h; L[k] = l; Cc[k] = c; V[k] = v; LAST[k] = last; FIRST[k] = i + 1;
+    }
+    return {
+      n: count - k, step,
+      time: T.subarray(k), open: O.subarray(k), high: H.subarray(k), low: L.subarray(k),
+      close: Cc.subarray(k), vol: V.subarray(k), last: LAST.subarray(k), first: FIRST.subarray(k)
+    };
+  }
+
+  function ema(src, p) {
+    const n = src.length, out = new Float64Array(n), a = 2 / (p + 1);
+    let v = n ? src[0] : 0;
+    for (let i = 0; i < n; i++) { v = i === 0 ? src[0] : a * src[i] + (1 - a) * v; out[i] = v; }
+    return out;
+  }
+  function sma(src, p) {
+    const n = src.length, out = new Float64Array(n).fill(NaN);
+    let s = 0;
+    for (let i = 0; i < n; i++) {
+      s += src[i];
+      if (i >= p) s -= src[i - p];
+      if (i >= p - 1) out[i] = s / p;
+    }
+    return out;
+  }
+  function bollinger(src, p, k) {
+    const n = src.length, mid = sma(src, p), up = new Float64Array(n).fill(NaN), lo = new Float64Array(n).fill(NaN);
+    for (let i = p - 1; i < n; i++) {
+      let s2 = 0;
+      for (let j = i - p + 1; j <= i; j++) s2 += (src[j] - mid[i]) * (src[j] - mid[i]);
+      const sd = Math.sqrt(s2 / p);
+      up[i] = mid[i] + k * sd; lo[i] = mid[i] - k * sd;
+    }
+    return { mid, up, lo };
+  }
+  function rsi(src, p) {
+    const n = src.length, out = new Float64Array(n).fill(NaN);
+    if (n <= p) return out;
+    let g = 0, l = 0;
+    for (let i = 1; i <= p; i++) { const d = src[i] - src[i - 1]; if (d > 0) g += d; else l -= d; }
+    g /= p; l /= p;
+    out[p] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+    for (let i = p + 1; i < n; i++) {
+      const d = src[i] - src[i - 1];
+      g = (g * (p - 1) + (d > 0 ? d : 0)) / p;
+      l = (l * (p - 1) + (d < 0 ? -d : 0)) / p;
+      out[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+    }
+    return out;
+  }
+  function atr(B, p) {
+    const n = B.n, tr = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const hl = B.high[i] - B.low[i];
+      tr[i] = i === 0 ? hl : Math.max(hl, Math.abs(B.high[i] - B.close[i - 1]), Math.abs(B.low[i] - B.close[i - 1]));
+    }
+    return sma(tr, p);
+  }
+  function indicators(B) {
+    const c = B.close;
+    const e12 = ema(c, 12), e26 = ema(c, 26);
+    const macd = new Float64Array(B.n);
+    for (let i = 0; i < B.n; i++) macd[i] = e12[i] - e26[i];
+    return {
+      ema20: ema(c, 20), ema50: ema(c, 50), bb: bollinger(c, 20, 2), rsi: rsi(c, 14),
+      macd, macdSig: sma(macd, 9), atr: atr(B, 14)
+    };
+  }
+
+  function demoData(days) {
+    const start = Date.UTC(2025, 0, 6) / 1000;
+    const cols = {
+      time: new Col(Float64Array), open: new Col(Float64Array), high: new Col(Float64Array),
+      low: new Col(Float64Array), close: new Col(Float64Array), vol: new Col(Float32Array), spread: new Col(Float32Array)
+    };
+    const gauss = () => { let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    let p = 150, vol = 0.006, made = 0;
+    for (let d = 0; made < days; d++) {
+      const day0 = start + d * 86400;
+      const wd = new Date(day0 * 1000).getUTCDay();
+      if (wd === 0 || wd === 6) continue;
+      made++;
+      for (let m = 0; m < 1440; m++) {
+        const hr = (m / 60) | 0;
+        const sess = (hr >= 9 && hr <= 18) ? 1.4 : (hr >= 2 && hr < 6) ? 1.1 : 0.7;
+        vol = Math.max(0.002, 0.985 * vol + 0.015 * 0.006 + 0.0004 * gauss());
+        let r = gauss() * vol * sess;
+        if (Math.random() < 0.0008) r += (Math.random() < 0.5 ? -1 : 1) * 0.06 * (0.5 + Math.random());
+        const o = p, c = p + r;
+        const h = Math.max(o, c) + Math.abs(gauss()) * vol * 0.6;
+        const l = Math.min(o, c) - Math.abs(gauss()) * vol * 0.6;
+        p = c;
+        cols.time.push(day0 + m * 60); cols.open.push(o); cols.high.push(h); cols.low.push(l); cols.close.push(c);
+        cols.vol.push(Math.round(20 + Math.abs(gauss()) * 30 * sess));
+        cols.spread.push(14 + (hr < 2 || hr >= 22 ? 8 : 0) + Math.floor(Math.random() * 4));
+      }
+    }
+    const D = {
+      time: cols.time.done(), open: cols.open.done(), high: cols.high.done(), low: cols.low.done(),
+      close: cols.close.done(), vol: cols.vol.done(), spread: cols.spread.done()
+    };
+    D.n = D.time.length; D.hasSpread = true; D.hasVol = true; D.skipped = 0;
+    return D;
+  }
+
+  return {
+    HS, HMAX, parseFile, parseDay, parseTod, parseStamp, mapHeader, detectDelim, inferMeta, parseHours, hourOf,
+    eligible, spikeCtx, sample, longGross, costPips, barrier, atrAt, baseline, summarize, buildBars, indicators, demoData
+  };
+})();
+</script>
+
+<script>
+/* ============================================================
+   App: UI, chart, drawing tools, labeling, statistics
+   ============================================================ */
+(() => {
+  'use strict';
+  const C = window.BlindCore;
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const HS = C.HS, HMAX = C.HMAX;
+  const LOADBARS = 1800;
+  const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618];
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- persistence (per-viewer convenience only) ---------- */
+  const store = {
+    get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+  };
+  const DEFAULTS = { mode: 'random', W: 15, k: 3, hours: '', slip: 0.5, stopMode: 'atr', atrTf: 1, tpMult: 2, slMult: 1.5, tp: 10, sl: 10, pip: '', point: '', visible: 150, showTime: true, reveal: true };
+  const S = Object.assign({}, DEFAULTS, store.get('blindlab:settings') || {});
+
+  const state = {
+    D: null, meta: null, name: '', fp: '',
+    labels: [],
+    q: null, phase: 'idle', conf: 2, tf: 1,
+    ind: Object.assign({ ema20: true, ema50: true, bb: false, vol: true, rsi: false, macd: false, stops: true }, store.get('blindlab:ind') || {}),
+    previewDir: null, revealRec: null, touch: false, pinch: null,
+    tool: 'select', magnet: true,
+    drawings: [], selected: -1, draft: null, drag: null,
+    view: { count: 150, end: 0 },
+    B: null, I: null, dec: 0, decT: 0,
+    reveal: 1, hover: null,
+    baseCache: new Map(), horizon: 30,
+    downloads: null
+  };
+
+  /* ---------- small helpers ---------- */
+  const pipSize = () => { const v = parseFloat(S.pip); return v > 0 ? v : state.meta.pip; };
+  const pointSize = () => { const v = parseFloat(S.point); return v > 0 ? v : state.meta.point; };
+  const digits = () => Math.max(0, Math.round(-Math.log10(pointSize())));
+  const fmtP = (p) => p.toFixed(digits());
+  const sgn = (v, d) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d == null ? 1 : d);
+  const cls = (v) => (v > 0 ? 'pos' : v < 0 ? 'neg' : 'muted');
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const hhmm = (ts) => { const d = new Date(ts * 1000); return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); };
+  const ymdhm = (ts) => { const d = new Date(ts * 1000); return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()) + ' ' + pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); };
+  const samplingKey = () => JSON.stringify({ mode: S.mode, W: +S.W, k: +S.k, hours: (S.hours || '').trim() });
+  const cfgFromKey = (key) => {
+    const o = JSON.parse(key);
+    return { mode: o.mode, W: o.W, k: o.k, hours: C.parseHours(o.hours), spacing: 120, minLook: Math.min(1500, Math.max(60, Math.floor(state.D.n / 10))) };
+  };
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 1600);
+  }
+
+  /* ---------- views ---------- */
+  function show(view) {
+    $('#setupView').hidden = view !== 'setup';
+    $('#quizView').hidden = view !== 'quiz';
+    $('#statsView').hidden = view !== 'stats';
+    const loaded = !!state.D;
+    $('#btnStats').hidden = !loaded || view === 'stats';
+    $('#btnQuiz').hidden = !loaded || view !== 'stats';
+    $('#btnData').hidden = !loaded || view === 'setup';
+    $('#progress').hidden = !loaded || view === 'setup';
+    state.view.name = view;
+    if (view === 'quiz') requestAnimationFrame(resize);
+    if (view === 'stats') renderStats();
+    if (view === 'setup') renderSaved();
+  }
+
+  function updateProgress() {
+    const L = state.labels;
+    const nl = L.filter((l) => l.dir === 1).length, ns = L.filter((l) => l.dir === -1).length, nn = L.filter((l) => l.dir === 0).length;
+    $('#progress').innerHTML = '已答 <b>' + L.length + '</b> 题<span class="more">，做多 ' + nl + '，做空 ' + ns + '，不做 ' + nn + '</span>';
+  }
+
+  /* ---------- loading ---------- */
+  function setStatus(msg, isErr) {
+    const el = $('#loadStatus');
+    el.hidden = !msg; el.textContent = msg || ''; el.classList.toggle('error', !!isErr);
+  }
+
+  async function loadFile(file) {
+    setStatus('正在读取 ' + file.name + ' …');
+    const bar = $('#loadBar'); bar.hidden = false; bar.firstElementChild.style.width = '0%';
+    try {
+      const D = await C.parseFile(file, (p) => { bar.firstElementChild.style.width = Math.round(p * 100) + '%'; });
+      bar.hidden = true;
+      const fp = file.name + '|' + D.n + '|' + D.time[0] + '|' + D.time[D.n - 1];
+      if (attachData(D, file.name, fp) && $('#keepData').checked) saveDataset(D, file.name, fp);
+    } catch (err) {
+      bar.hidden = true;
+      setStatus(err && err.message ? err.message : '读取失败，请确认文件格式。', true);
+    }
+  }
+
+  function attachData(D, name, fp) {
+    if (D.n < 3000) { setStatus('数据太少（' + D.n + ' 根），至少需要几千根 M1。', true); return false; }
+    const meta = C.inferMeta(D);
+    if (meta.medianStep !== 60) { setStatus('这份数据相邻 K 线的间隔是 ' + meta.medianStep + ' 秒，不是 M1。请导出 M1 数据。', true); return false; }
+    state.D = D; state.meta = meta; state.name = name; state.fp = fp;
+    state.baseCache.clear();
+    const saved = store.get('blindlab:labels:' + fp);
+    state.labels = saved && Array.isArray(saved.labels) ? saved.labels : [];
+    const notes = [];
+    if (!D.hasSpread) notes.push('文件里没有点差列，成本只按滑点计算');
+    if (D.skipped) notes.push('跳过了 ' + D.skipped + ' 行无法识别或时间重复的数据');
+    if (state.labels.length) notes.push('已恢复之前的 ' + state.labels.length + ' 条记录');
+    $('#datasetName').textContent = name + '，' + D.n.toLocaleString('zh-CN') + ' 根 M1';
+    setStatus('');
+    updateProgress();
+    show('quiz');
+    nextQuestion();
+    if (notes.length) toast(notes.join('；'));
+    return true;
+  }
+
+  function saveLabels() {
+    if (!state.fp) return;
+    if (!store.set('blindlab:labels:' + state.fp, { labels: state.labels })) toast('浏览器存储不可用，刷新页面后记录会丢失，请及时导出。');
+  }
+
+  /* ---------- datasets kept in this browser (IndexedDB) ---------- */
+  let idbPromise = null;
+  function idbOpen() {
+    if (!idbPromise) {
+      idbPromise = new Promise((res, rej) => {
+        if (!window.indexedDB) { rej(new Error('unavailable')); return; }
+        let r;
+        try { r = indexedDB.open('blindlab', 1); } catch (err) { rej(err); return; }
+        r.onupgradeneeded = () => {
+          const db = r.result;
+          if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('bars')) db.createObjectStore('bars', { keyPath: 'id' });
+        };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error || new Error('open failed'));
+        r.onblocked = () => rej(new Error('blocked'));
+      });
+      idbPromise.catch(() => { idbPromise = null; });
+    }
+    return idbPromise;
+  }
+  function idbRun(stores, mode, fn) {
+    return idbOpen().then((db) => new Promise((res, rej) => {
+      const tx = db.transaction(stores, mode);
+      const out = fn(tx);
+      tx.oncomplete = () => res(typeof IDBRequest !== 'undefined' && out instanceof IDBRequest ? out.result : out);
+      tx.onerror = () => rej(tx.error || new Error('transaction failed'));
+      tx.onabort = () => rej(tx.error || new Error('transaction aborted'));
+    }));
+  }
+
+  // prices are stored as whole numbers of points when that is exact, which halves the size
+  function encodeBars(D, point) {
+    const n = D.n;
+    let exact = point > 0;
+    for (let i = 0; exact && i < n && i < 20000; i++) { const v = D.close[i] / point; if (Math.abs(v - Math.round(v)) > 1e-3) exact = false; }
+    const rec = { enc: exact ? 'i32' : 'f64', point, hasSpread: D.hasSpread, time: new Uint32Array(n), vol: D.vol.slice(), spread: D.spread.slice() };
+    for (let i = 0; i < n; i++) rec.time[i] = D.time[i];
+    ['open', 'high', 'low', 'close'].forEach((k) => {
+      if (!exact) { rec[k] = D[k].slice(); return; }
+      const a = new Int32Array(n), src = D[k];
+      for (let i = 0; i < n; i++) a[i] = Math.round(src[i] / point);
+      rec[k] = a;
+    });
+    return rec;
+  }
+  function decodeBars(rec) {
+    const n = rec.time.length;
+    const D = { n, time: new Float64Array(n), vol: rec.vol, spread: rec.spread };
+    for (let i = 0; i < n; i++) D.time[i] = rec.time[i];
+    ['open', 'high', 'low', 'close'].forEach((k) => {
+      if (rec.enc !== 'i32') { D[k] = rec[k]; return; }
+      const a = new Float64Array(n), src = rec[k], pt = rec.point;
+      for (let i = 0; i < n; i++) a[i] = src[i] * pt;
+      D[k] = a;
+    });
+    D.hasSpread = rec.hasSpread !== false; D.hasVol = true; D.skipped = 0;
+    return D;
+  }
+
+  async function saveDataset(D, name, fp) {
+    const rec = encodeBars(D, state.meta.point);
+    rec.id = fp;
+    const bytes = D.n * ((rec.enc === 'i32' ? 16 : 32) + 12);
+    const meta = { id: fp, name, n: D.n, first: D.time[0], last: D.time[D.n - 1], bytes, savedAt: Date.now(), lastUsed: Date.now() };
+    try {
+      await idbRun(['meta', 'bars'], 'readwrite', (tx) => { tx.objectStore('bars').put(rec); tx.objectStore('meta').put(meta); });
+      toast('数据已保存到这个浏览器，下次可以直接打开');
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    } catch (err) {
+      const quota = err && (err.name === 'QuotaExceededError' || /quota/i.test(err.message || ''));
+      toast(quota ? '浏览器的存储空间不够，这份数据没有保存。可以删掉旧数据，或只导出较短的时间段。' : '这个浏览器不允许保存数据，下次需要重新选择文件。');
+    }
+  }
+
+  async function openSaved(id) {
+    setStatus('正在从浏览器读取数据 …');
+    try {
+      const rec = await idbRun(['bars'], 'readonly', (tx) => tx.objectStore('bars').get(id));
+      const meta = await idbRun(['meta'], 'readonly', (tx) => tx.objectStore('meta').get(id));
+      if (!rec || !meta) { setStatus('没有找到这份数据，可能已被浏览器清理，请重新选择文件。', true); renderSaved(); return; }
+      if (attachData(decodeBars(rec), meta.name, id)) {
+        meta.lastUsed = Date.now();
+        idbRun(['meta'], 'readwrite', (tx) => { tx.objectStore('meta').put(meta); }).catch(() => {});
+      }
+    } catch (err) {
+      setStatus('读取保存的数据失败，请重新选择文件。', true);
+    }
+  }
+
+  async function deleteSaved(id) {
+    try {
+      await idbRun(['meta', 'bars'], 'readwrite', (tx) => { tx.objectStore('meta').delete(id); tx.objectStore('bars').delete(id); });
+      toast('已删除这份数据，答题记录仍然保留');
+    } catch (err) { toast('删除失败，请稍后再试'); }
+    renderSaved();
+  }
+
+  async function renderSaved() {
+    const box = $('#savedBox'), list = $('#savedList');
+    let metas;
+    try { metas = await idbRun(['meta'], 'readonly', (tx) => tx.objectStore('meta').getAll()); }
+    catch (err) { box.hidden = true; return; }
+    metas = (metas || []).sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0));
+    box.hidden = !metas.length;
+    list.textContent = '';
+    metas.forEach((m, i) => {
+      const li = document.createElement('li');
+      const info = document.createElement('div'); info.className = 'info';
+      const nameEl = document.createElement('b'); nameEl.textContent = m.name;
+      const desc = document.createElement('span');
+      const saved = store.get('blindlab:labels:' + m.id);
+      const answered = saved && Array.isArray(saved.labels) ? saved.labels.length : 0;
+      desc.textContent = m.n.toLocaleString('zh-CN') + ' 根 M1，' + ymdhm(m.first).slice(0, 10) + ' 至 ' + ymdhm(m.last).slice(0, 10) +
+        '，约 ' + Math.max(1, Math.round(m.bytes / 1048576)) + ' MB' + (answered ? '，已答 ' + answered + ' 题' : '');
+      info.append(nameEl, desc);
+      const act = document.createElement('div'); act.className = 'act';
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn' + (i === 0 ? ' primary' : ''); openBtn.textContent = i === 0 ? '继续上次' : '打开';
+      openBtn.addEventListener('click', () => openSaved(m.id));
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn'; delBtn.textContent = '删除';
+      let armed = 0;
+      delBtn.addEventListener('click', () => {
+        if (Date.now() - armed > 4000) {
+          armed = Date.now(); delBtn.textContent = '再点一次删除';
+          setTimeout(() => { if (delBtn.isConnected) delBtn.textContent = '删除'; }, 4000);
+          return;
+        }
+        deleteSaved(m.id);
+      });
+      act.append(openBtn, delBtn);
+      li.append(info, act);
+      list.append(li);
+    });
+    const note = $('#storageNote');
+    note.textContent = '数据和答题记录只存在这个浏览器里，清除浏览器数据时会一起删除。';
+    if (navigator.storage && navigator.storage.estimate) {
+      try {
+        const est = await navigator.storage.estimate();
+        if (est && est.usage != null) note.textContent += '目前占用约 ' + Math.max(1, Math.round(est.usage / 1048576)) + ' MB。';
+      } catch (err) { /* ignore */ }
+    }
+  }
+
+  /* ---------- questions ---------- */
+  function nextQuestion() {
+    const key = samplingKey();
+    const cfg = cfgFromKey(key);
+    const used = state.labels.map((l) => l.t);
+    const s = C.sample(state.D, cfg, used, 400000);
+    if (!s) {
+      state.q = null; state.phase = 'idle';
+      $('#decideBar').hidden = false; $('#resultBar').hidden = true;
+      const crowded = used.length * cfg.spacing * 2 > state.D.n * 0.5;
+      toast(crowded ? '这份数据里不重叠的题目快用完了，换一份更长的数据再继续。' : '按当前设置找不到新题目，可以放宽时段或降低急涨急跌阈值。');
+      draw();
+      return;
+    }
+    state.q = { t: s.t, ctx: s.ctx, shownAt: Date.now(), cfg: key };
+    state.phase = 'quiz';
+    state.drawings = []; state.selected = -1; state.draft = null; state.drag = null;
+    state.reveal = 1; state.revealRec = null; state.previewDir = null;
+    $('#noteInput').value = '';
+    $('#decideBar').hidden = false; $('#resultBar').hidden = true;
+    rebuild();
+    // fewer bars on narrow screens so candles stay readable
+    state.view.count = clampCount(Math.min(+S.visible || 150, Math.floor((cv.clientWidth || 900) / 4.5)));
+    state.view.end = state.dec;
+    setTool('select');
+    draw();
+  }
+
+  function rebuild() {
+    const q = state.q; if (!q) return;
+    const D = state.D;
+    const endIdx = state.phase === 'revealed' ? q.t + HMAX : q.t;
+    const B = C.buildBars(D, endIdx, state.tf, LOADBARS);
+    let di = B.n - 1;
+    while (di > 0 && B.time[di] > D.time[q.t]) di--;
+    state.B = B; state.dec = di; state.decT = D.time[q.t] + 60;
+    state.I = C.indicators(B);
+  }
+
+  function decide(dir) {
+    if (state.phase !== 'quiz' || !state.q) return;
+    const q = state.q;
+    const keyEl = $('.key[data-dir="' + dir + '"]');
+    if (keyEl) { keyEl.classList.add('hit'); setTimeout(() => keyEl.classList.remove('hit'), 120); }
+    const rec = {
+      id: state.labels.length ? state.labels[state.labels.length - 1].id + 1 : 1,
+      t: q.t, time: state.D.time[q.t], dir, conf: state.conf,
+      note: $('#noteInput').value.trim(), ms: Date.now() - q.shownAt, tf: state.tf,
+      ind: Object.keys(state.ind).filter((k) => state.ind[k]).join(' '),
+      draw: state.drawings.map((d) => ({ type: d.type, p1: d.p1, p2: d.p2 || null })),
+      ctx: q.ctx, cfg: q.cfg, at: new Date().toISOString()
+    };
+    state.labels.push(rec);
+    saveLabels();
+    updateProgress();
+    if (S.reveal) revealAnswer(rec);
+    else { toast('已记录'); nextQuestion(); }
+  }
+
+  function revealAnswer(rec) {
+    state.phase = 'revealed';
+    state.revealRec = rec;
+    state.selected = -1; state.draft = null;
+    rebuild();
+    const future = state.B.n - 1 - state.dec;
+    const padSlots = padCount();
+    if (future > padSlots) state.view.end = Math.min(state.B.n - 1, state.dec + (future - padSlots));
+    else state.view.end = state.dec;
+    renderResult(rec);
+    $('#decideBar').hidden = true; $('#resultBar').hidden = false;
+    $('#btnNext').focus({ preventScroll: true });
+    if (reduceMotion) { state.reveal = 1; draw(); return; }
+    state.reveal = 0;
+    const t0 = performance.now();
+    const step = (now) => {
+      state.reveal = Math.min(1, (now - t0) / 520);
+      draw();
+      if (state.reveal < 1 && state.phase === 'revealed') requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function renderResult(rec) {
+    const D = state.D, pip = pipSize(), point = pointSize(), slip = +S.slip || 0;
+    const dirName = rec.dir === 1 ? '做多' : rec.dir === -1 ? '做空' : '不做';
+    const ctxName = rec.ctx === 1 ? '，这是一次急涨' : rec.ctx === -1 ? '，这是一次急跌' : '';
+    let html = '<span class="verdict">你选择了' + dirName + ctxName + '</span>';
+    HS.forEach((h) => {
+      const g = C.longGross(D, rec.t, h, pip, point);
+      if (rec.dir === 0) {
+        html += '<span class="h"><span>' + h + ' 分钟后</span>中间价 <b class="' + cls(g) + '">' + sgn(g) + '</b> pip</span>';
+      } else {
+        const gross = rec.dir * g, net = gross - C.costPips(D, rec.t, h, pip, point, slip);
+        html += '<span class="h"><span>' + h + ' 分钟</span><b class="' + cls(gross) + '">' + sgn(gross) + '</b> pip，扣成本 <b class="' + cls(net) + '">' + sgn(net) + '</b></span>';
+      }
+    });
+    if (rec.dir !== 0) {
+      const st = stopsPips(rec.t), tpv = st.tp, slv = st.sl;
+      const b = C.barrier(D, rec.t, rec.dir, tpv, slv, pip, point, slip);
+      const how = b.how === 'tp' ? '先到止盈' : b.how === 'sl' ? '先到止损' : '60 分钟内两边都没碰到';
+      html += '<span class="h"><span>止盈 ' + tpv.toFixed(1) + ' / 止损 ' + slv.toFixed(1) + ' pip</span>' + how + '，<b class="' + cls(b.pips) + '">' + sgn(b.pips) + '</b> pip（' + sgn(b.r, 2) + ' R）</span>';
+    }
+    $('#resultBox').innerHTML = html;
+  }
+
+  function undoLabel() {
+    if (!state.labels.length) { toast('还没有记录'); return; }
+    const last = state.labels.pop();
+    saveLabels(); updateProgress();
+    toast('已删除第 ' + last.id + ' 条记录');
+    if (state.phase === 'revealed' && state.q && state.q.t === last.t) nextQuestion();
+  }
+
+  /* ---------- take-profit / stop-loss ---------- */
+  function stopsPips(t) {
+    if (S.stopMode === 'pips') return { tp: Math.max(0.1, +S.tp || 10), sl: Math.max(0.1, +S.sl || 10), atr: NaN };
+    const atr = C.atrAt(state.D, t, +S.atrTf || 1, 14) / pipSize();
+    const ok = atr > 0 && isFinite(atr);
+    return { tp: ok ? (+S.tpMult || 2) * atr : 10, sl: ok ? (+S.slMult || 1.5) * atr : 10, atr };
+  }
+
+  function stopPlan() {
+    const q = state.q;
+    if (!q || !state.ind.stops) return null;
+    const D = state.D, pip = pipSize(), point = pointSize(), slip = +S.slip || 0;
+    const st = stopsPips(q.t);
+    if (state.phase === 'revealed') {
+      const rec = state.revealRec;
+      if (!rec || rec.dir === 0) return null;
+      const b = C.barrier(D, q.t, rec.dir, st.tp, st.sl, pip, point, slip);
+      return { mode: 'actual', dir: rec.dir, st, b, entry: b.entry, tp: b.entry + rec.dir * st.tp * pip, sl: b.entry - rec.dir * st.sl * pip };
+    }
+    const eL = D.close[q.t] + D.spread[q.t] * point + slip * pip, eS = D.close[q.t] - slip * pip;
+    return { mode: 'preview', st, long: { tp: eL + st.tp * pip, sl: eL - st.sl * pip }, short: { tp: eS - st.tp * pip, sl: eS + st.sl * pip } };
+  }
+
+  function stackYs(ys, gap, y0, y1) {
+    // spread label positions so that neighbours are at least `gap` apart, keeping them inside [y0, y1]
+    const idx = ys.map((y, i) => i).sort((a, b) => ys[a] - ys[b]);
+    const out = ys.slice();
+    for (let k = 1; k < idx.length; k++) out[idx[k]] = Math.max(out[idx[k]], out[idx[k - 1]] + gap);
+    if (idx.length && out[idx[idx.length - 1]] > y1) {
+      out[idx[idx.length - 1]] = y1;
+      for (let k = idx.length - 2; k >= 0; k--) out[idx[k]] = Math.min(out[idx[k]], out[idx[k + 1]] - gap);
+    }
+    for (let k = 0; k < idx.length; k++) out[idx[k]] = Math.max(y0, out[idx[k]]);
+    return out;
+  }
+
+  function drawStops(plan, xDecR, revealedTo) {
+    if (!plan) return;
+    const yTop = LY.main.y0 + 10, yBot = LY.main.y0 + LY.main.h - 10;
+    g.save();
+    g.beginPath(); g.rect(LY.plotL, LY.main.y0, LY.plotR - LY.plotL, LY.main.h); g.clip();
+    g.lineWidth = 1.2;
+    const hl = (y, x0, x1, color, dash, alpha) => {
+      g.globalAlpha = alpha; g.strokeStyle = color; g.setLineDash(dash);
+      g.beginPath(); g.moveTo(x0, Math.round(y) + 0.5); g.lineTo(x1, Math.round(y) + 0.5); g.stroke();
+    };
+    if (plan.mode === 'preview') {
+      const pd = state.previewDir;
+      const items = [];
+      [[1, plan.long], [-1, plan.short]].forEach(([dir, lv]) => {
+        const a = pd == null ? 0.8 : (pd === dir ? 1 : 0.15);
+        const dash = dir === 1 ? [7, 3] : [2, 3];
+        const nm = dir === 1 ? '做多' : '做空';
+        hl(pToY(lv.tp), xDecR, LY.plotR, col.up, dash, a);
+        hl(pToY(lv.sl), xDecR, LY.plotR, col.down, dash, a);
+        items.push({ y: pToY(lv.tp), text: nm + '止盈 ' + fmtP(lv.tp), color: col.up, a });
+        items.push({ y: pToY(lv.sl), text: nm + '止损 ' + fmtP(lv.sl), color: col.down, a });
+      });
+      if (LY.plotR - xDecR > 70) {
+        g.setLineDash([]); g.font = font(10.5, 500); g.textAlign = 'right'; g.textBaseline = 'middle';
+        const ys = stackYs(items.map((it) => it.y), 14, yTop, yBot);
+        items.forEach((it, i) => {
+          const w = g.measureText(it.text).width + 8;
+          g.globalAlpha = 0.9; g.fillStyle = col.curtain; g.fillRect(LY.plotR - 4 - w, ys[i] - 7, w, 14);
+          g.globalAlpha = it.a; g.fillStyle = it.color; g.fillText(it.text, LY.plotR - 8, ys[i]);
+        });
+      }
+    } else {
+      const D = state.D, b = plan.b;
+      const xe = timeToX(D.time[b.exitJ] + (b.how === 'time' ? 0 : 30));
+      const xEnd = Math.max(xDecR + 4, Math.min(LY.plotR, xe));
+      hl(pToY(plan.entry), xDecR, xEnd, col.ink, [4, 3], 0.75);
+      hl(pToY(plan.tp), xDecR, xEnd, col.up, [], 0.95);
+      hl(pToY(plan.sl), xDecR, xEnd, col.down, [], 0.95);
+      if (xe <= revealedTo + 1) {
+        const ye = pToY(b.exitPx), clr = b.how === 'tp' ? col.up : b.how === 'sl' ? col.down : col.ink;
+        g.globalAlpha = 1; g.setLineDash([]);
+        g.fillStyle = clr; g.strokeStyle = col.bg; g.lineWidth = 2;
+        g.beginPath(); g.arc(xe, ye, 5, 0, Math.PI * 2); g.fill(); g.stroke();
+        const nm = b.how === 'tp' ? '止盈' : b.how === 'sl' ? '止损' : '到时平仓';
+        const txt = nm + ' ' + sgn(b.pips) + ' pip';
+        g.font = font(11, 600);
+        const w = g.measureText(txt).width;
+        const right = xe + 12 + w > LY.plotR;
+        const below = (plan.dir === 1) === (b.how === 'sl');
+        const ty = Math.max(yTop, Math.min(yBot, ye + (below ? 14 : -14)));
+        g.fillStyle = col.bg; g.globalAlpha = 0.85;
+        g.fillRect(right ? xe - 12 - w - 4 : xe + 8, ty - 8, w + 8, 16);
+        g.globalAlpha = 1; g.fillStyle = clr; g.textAlign = right ? 'right' : 'left'; g.textBaseline = 'middle';
+        g.fillText(txt, right ? xe - 12 : xe + 12, ty);
+      }
+    }
+    g.restore();
+    g.setLineDash([]); g.globalAlpha = 1;
+    if (plan.mode === 'actual') {
+      // coloured price tags on the axis, spread apart when they would overlap
+      const tags = [[plan.tp, col.up], [plan.entry, col.ink], [plan.sl, col.down]];
+      const ys = stackYs(tags.map((x) => pToY(x[0])), 18, LY.main.y0 + 9, LY.main.y0 + LY.main.h - 9);
+      g.font = font(11, 600); g.textAlign = 'left'; g.textBaseline = 'middle';
+      tags.forEach(([p, c], i) => {
+        g.fillStyle = c; g.fillRect(LY.plotR + 1, ys[i] - 9, LY.W - LY.plotR - 2, 18);
+        g.fillStyle = col.bg; g.fillText(fmtP(p), LY.plotR + 6, ys[i]);
+      });
+    }
+  }
+
+  /* ---------- chart geometry ---------- */
+  const cv = $('#chart');
+  const g = cv.getContext('2d');
+  let dpr = 1;
+  let LY = null;
+  let col = {};
+
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (n) => cs.getPropertyValue(n).trim();
+    col = {
+      bg: v('--chart-bg'), ink: v('--ink'), ink2: v('--ink-2'), rule: v('--rule'), grid: v('--grid'),
+      up: v('--up'), down: v('--down'), accent: v('--accent'), curtain: v('--curtain'), hatch: v('--hatch'),
+      future: v('--future'), font: v('--font')
+    };
+  }
+
+  function clampCount(c) { return Math.max(30, Math.min(800, Math.round(c))); }
+  function padCount() { return Math.max(8, Math.round(state.view.count * 0.25)); }
+
+  function layout() {
+    const W = cv.clientWidth, H = cv.clientHeight;
+    const axisW = 70, timeH = 22;
+    const subs = ['vol', 'rsi', 'macd'].filter((k) => state.ind[k]);
+    const subH = subs.length ? Math.max(46, Math.min(96, (H - timeH) * 0.16)) : 0;
+    const mainH = Math.max(80, H - timeH - subs.length * subH);
+    LY = {
+      W, H, plotL: 0, plotR: W - axisW, timeH,
+      main: { y0: 0, h: mainH },
+      subs: subs.map((k, i) => ({ key: k, y0: mainH + i * subH, h: subH }))
+    };
+    LY.timeY = mainH + subs.length * subH;
+  }
+
+  function slots() { return state.view.count + padCount(); }
+  function slotW() { return (LY.plotR - LY.plotL) / slots(); }
+  function firstIdx() { return state.view.end - state.view.count + 1; }
+  function idxToX(i) { return LY.plotL + (i - firstIdx() + 0.5) * slotW(); }
+  function xToIdxF(x) { return (x - LY.plotL) / slotW() + firstIdx(); }
+
+  function xToTime(x) {
+    const B = state.B, f = xToIdxF(x), i = Math.floor(f), fr = f - i, st = B.step;
+    if (i < 0) return B.time[0] + (i + fr) * st;
+    if (i >= B.n) return B.time[B.n - 1] + (i - (B.n - 1) + fr) * st;
+    return B.time[i] + fr * st;
+  }
+  function timeToX(T) {
+    const B = state.B, st = B.step;
+    let lo = 0, hi = B.n - 1, i = -1;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (B.time[mid] <= T) { i = mid; lo = mid + 1; } else hi = mid - 1; }
+    let f;
+    if (i < 0) f = (T - B.time[0]) / st;
+    else if (i === B.n - 1) f = i + (T - B.time[i]) / st;
+    else f = i + Math.min(1, (T - B.time[i]) / st);
+    return LY.plotL + (f - firstIdx()) * slotW();
+  }
+
+  let PR = { hi: 1, lo: 0 };
+  function priceRange(plan) {
+    const B = state.B, I = state.I;
+    const a = Math.max(0, firstIdx()), b = Math.min(B.n - 1, firstIdx() + slots() - 1);
+    const lastShown = state.phase === 'revealed' ? b : Math.min(b, state.dec);
+    let hi = -Infinity, lo = Infinity;
+    for (let i = a; i <= lastShown; i++) {
+      if (B.high[i] > hi) hi = B.high[i];
+      if (B.low[i] < lo) lo = B.low[i];
+      if (state.ind.bb && !isNaN(I.bb.up[i])) { if (I.bb.up[i] > hi) hi = I.bb.up[i]; if (I.bb.lo[i] < lo) lo = I.bb.lo[i]; }
+    }
+    if (plan) {
+      const lv = plan.mode === 'preview' ? [plan.long.tp, plan.long.sl, plan.short.tp, plan.short.sl] : [plan.tp, plan.sl];
+      lv.forEach((v) => { if (v > hi) hi = v; if (v < lo) lo = v; });
+    }
+    if (!isFinite(hi)) { hi = 1; lo = 0; }
+    const padv = Math.max((hi - lo) * 0.08, pointSize() * 5);
+    PR = { hi: hi + padv, lo: lo - padv };
+  }
+  function pToY(p) { const m = LY.main; return m.y0 + 8 + (PR.hi - p) / (PR.hi - PR.lo) * (m.h - 16); }
+  function yToP(y) { const m = LY.main; return PR.hi - (y - m.y0 - 8) / (m.h - 16) * (PR.hi - PR.lo); }
+
+  function niceStep(range, target) {
+    const raw = range / target, mag = Math.pow(10, Math.floor(Math.log10(raw))), nrm = raw / mag;
+    return (nrm < 1.5 ? 1 : nrm < 3 ? 2 : nrm < 7 ? 5 : 10) * mag;
+  }
+
+  function resize() {
+    if (!LY && $('#quizView').hidden) return;
+    const r = cv.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    layout(); draw();
+  }
+
+  /* ---------- drawing ---------- */
+  function font(sz, wt) { return (wt || 400) + ' ' + sz + 'px ' + col.font; }
+
+  function draw() {
+    if (!LY || $('#quizView').hidden) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = col.bg; g.fillRect(0, 0, LY.W, LY.H);
+    if (!state.B || !state.q) {
+      g.fillStyle = col.ink2; g.font = font(13); g.textAlign = 'center';
+      g.fillText('没有题目', LY.W / 2, LY.H / 2);
+      return;
+    }
+    const plan = stopPlan();
+    priceRange(plan);
+    const B = state.B, I = state.I, sw = slotW();
+    const a = Math.max(0, Math.floor(firstIdx())), b = Math.min(B.n - 1, firstIdx() + slots() - 1);
+    const xDecR = idxToX(state.dec) + sw / 2;
+    const revealed = state.phase === 'revealed';
+    const curtainX = revealed ? xDecR + (LY.plotR - xDecR) * state.reveal : xDecR;
+    const maxDrawIdx = revealed ? b : Math.min(b, state.dec);
+
+    // grid + price labels
+    const step = niceStep(PR.hi - PR.lo, Math.max(3, LY.main.h / 60));
+    g.strokeStyle = col.grid; g.lineWidth = 1;
+    g.font = font(11); g.fillStyle = col.ink2; g.textAlign = 'left'; g.textBaseline = 'middle';
+    for (let p = Math.ceil(PR.lo / step) * step; p <= PR.hi; p += step) {
+      const y = Math.round(pToY(p)) + 0.5;
+      g.beginPath(); g.moveTo(LY.plotL, y); g.lineTo(LY.plotR, y); g.stroke();
+      g.fillText(fmtP(p), LY.plotR + 6, y);
+    }
+
+    // time labels + vertical grid
+    const minGap = 74, every = niceEvery(Math.ceil(minGap / sw));
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let i = a; i <= maxDrawIdx; i++) {
+      if (((B.time[i] / B.step) | 0) % every !== 0) continue;
+      const x = Math.round(idxToX(i)) + 0.5;
+      g.strokeStyle = col.grid;
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, LY.timeY); g.stroke();
+      g.fillStyle = col.ink2;
+      g.fillText(timeLabel(B.time[i]), x, LY.timeY + LY.timeH / 2);
+    }
+
+    // future tint
+    if (revealed) { g.fillStyle = col.future; g.fillRect(xDecR, 0, LY.plotR - xDecR, LY.timeY); }
+
+    // clip main pane
+    g.save();
+    g.beginPath(); g.rect(LY.plotL, LY.main.y0, LY.plotR - LY.plotL, LY.main.h); g.clip();
+    if (revealed && state.reveal < 1) { g.beginPath(); g.rect(LY.plotL, LY.main.y0, curtainX - LY.plotL, LY.main.h); g.clip(); }
+
+    // candles
+    const bw = Math.max(1, Math.min(sw * 0.7, sw - 1));
+    for (let i = a; i <= maxDrawIdx; i++) {
+      const x = idxToX(i), o = B.open[i], c = B.close[i];
+      const up = c >= o, clr = up ? col.up : col.down;
+      g.strokeStyle = clr; g.fillStyle = clr; g.lineWidth = 1;
+      const xx = Math.round(x) + 0.5;
+      g.beginPath(); g.moveTo(xx, pToY(B.high[i])); g.lineTo(xx, pToY(B.low[i])); g.stroke();
+      const y1 = pToY(Math.max(o, c)), y2 = pToY(Math.min(o, c));
+      const hgt = Math.max(1, y2 - y1);
+      if (bw <= 2) { g.beginPath(); g.moveTo(xx, y1); g.lineTo(xx, y1 + hgt); g.lineWidth = Math.max(1, bw); g.stroke(); g.lineWidth = 1; }
+      else if (up) { g.fillStyle = col.bg; g.fillRect(x - bw / 2, y1, bw, hgt); g.strokeRect(Math.round(x - bw / 2) + 0.5, Math.round(y1) + 0.5, Math.round(bw) - 1, Math.max(0, Math.round(hgt) - 1)); }
+      else g.fillRect(x - bw / 2, y1, bw, hgt);
+    }
+
+    // indicator lines
+    const line = (arr, clr, wdt, dash) => {
+      g.strokeStyle = clr; g.lineWidth = wdt || 1.25; g.setLineDash(dash || []);
+      g.beginPath(); let on = false;
+      for (let i = a; i <= maxDrawIdx; i++) {
+        const v = arr[i]; if (isNaN(v)) { on = false; continue; }
+        const x = idxToX(i), y = pToY(v);
+        if (!on) { g.moveTo(x, y); on = true; } else g.lineTo(x, y);
+      }
+      g.stroke(); g.setLineDash([]);
+    };
+    if (state.ind.bb) { line(I.bb.up, col.ink2, 1, [3, 3]); line(I.bb.mid, col.ink2, 1); line(I.bb.lo, col.ink2, 1, [3, 3]); }
+    if (state.ind.ema20) line(I.ema20, col.accent, 1.4);
+    if (state.ind.ema50) line(I.ema50, col.ink, 1.2, [6, 3]);
+    g.restore();
+
+    // curtain
+    if (!revealed || state.reveal < 1) {
+      const x0 = revealed ? curtainX : xDecR;
+      if (x0 < LY.plotR) {
+        g.fillStyle = col.curtain; g.fillRect(x0, 0, LY.plotR - x0, LY.timeY);
+        g.save(); g.beginPath(); g.rect(x0, 0, LY.plotR - x0, LY.timeY); g.clip();
+        g.strokeStyle = col.hatch; g.lineWidth = 1;
+        for (let x = x0 - LY.timeY; x < LY.plotR; x += 10) { g.beginPath(); g.moveTo(x, LY.timeY); g.lineTo(x + LY.timeY, 0); g.stroke(); }
+        g.restore();
+        if (!revealed && !plan && LY.plotR - x0 > 90) {
+          g.font = font(12); g.textAlign = 'center'; g.textBaseline = 'middle';
+          const msg = '后面的走势已隐藏', tw = g.measureText(msg).width + 16, cx = (x0 + LY.plotR) / 2, cy = LY.main.y0 + LY.main.h / 2;
+          g.fillStyle = col.curtain; g.fillRect(cx - tw / 2, cy - 11, tw, 22);
+          g.fillStyle = col.ink2; g.fillText(msg, cx, cy);
+        }
+      }
+    }
+
+    // decision line
+    g.strokeStyle = col.ink; g.globalAlpha = 0.55; g.setLineDash([4, 4]); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(Math.round(xDecR) + 0.5, 0); g.lineTo(Math.round(xDecR) + 0.5, LY.timeY); g.stroke();
+    g.setLineDash([]); g.globalAlpha = 1;
+    if (revealed && xDecR < LY.plotR - 60 && xDecR > LY.plotL) {
+      g.font = font(11, 500); g.textBaseline = 'top'; g.textAlign = 'left'; g.fillStyle = col.ink2;
+      g.fillText('决策之后', xDecR + 6, LY.main.y0 + LY.main.h - 18);
+    }
+
+    // last price tag at decision (the take-profit / stop tags replace it after the reveal)
+    if (!plan || plan.mode !== 'actual') priceTag(B.close[state.dec], col.ink, col.bg);
+
+    // drawings
+    g.save(); g.beginPath(); g.rect(LY.plotL, LY.main.y0, LY.plotR - LY.plotL, LY.main.h); g.clip();
+    state.drawings.forEach((d, i) => renderDrawing(d, i === state.selected, false));
+    if (state.draft) renderDrawing(state.draft, true, true);
+    g.restore();
+    state.drawings.forEach((d) => { if (d.type === 'hline') priceTag(d.p1.price, col.accent, col.bg); });
+    drawStops(plan, xDecR, revealed ? curtainX : xDecR);
+
+    // sub panes
+    LY.subs.forEach((p) => drawSub(p, a, maxDrawIdx, revealed ? curtainX : xDecR));
+
+    // separators
+    g.strokeStyle = col.rule; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(LY.plotR + 0.5, 0); g.lineTo(LY.plotR + 0.5, LY.timeY); g.stroke();
+    g.beginPath(); g.moveTo(0, LY.timeY + 0.5); g.lineTo(LY.W, LY.timeY + 0.5); g.stroke();
+    LY.subs.forEach((p) => { g.beginPath(); g.moveTo(0, p.y0 + 0.5); g.lineTo(LY.W, p.y0 + 0.5); g.stroke(); });
+
+    // crosshair + readout
+    drawCrosshair();
+    drawReadout();
+  }
+
+  function niceEvery(n) {
+    const c = [1, 2, 5, 10, 15, 20, 30, 60, 120, 240];
+    for (const v of c) if (v >= n) return v;
+    return 480;
+  }
+
+  function timeLabel(ts) {
+    if (S.showTime) return hhmm(ts);
+    const m = Math.round((ts + state.B.step - state.decT) / 60);
+    return (m > 0 ? '+' : m < 0 ? '−' : '') + Math.abs(m) + ' 分';
+  }
+
+  function priceTag(p, bgc, fgc) {
+    const y = pToY(p);
+    if (y < LY.main.y0 || y > LY.main.y0 + LY.main.h) return;
+    g.fillStyle = bgc; g.fillRect(LY.plotR + 1, y - 9, LY.W - LY.plotR - 2, 18);
+    g.fillStyle = fgc; g.font = font(11, 600); g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText(fmtP(p), LY.plotR + 6, y);
+  }
+
+  function drawSub(p, a, b, clipX) {
+    const B = state.B, I = state.I;
+    g.save();
+    g.beginPath(); g.rect(LY.plotL, p.y0, Math.min(LY.plotR, clipX) - LY.plotL, p.h); g.clip();
+    const yOf = (v, lo, hi) => p.y0 + 6 + (hi - v) / (hi - lo) * (p.h - 12);
+    const sw = slotW();
+    g.font = font(10); g.textBaseline = 'middle'; g.textAlign = 'left';
+    if (p.key === 'vol') {
+      let mx = 1; for (let i = a; i <= b; i++) if (B.vol[i] > mx) mx = B.vol[i];
+      for (let i = a; i <= b; i++) {
+        const x = idxToX(i), y = yOf(B.vol[i], 0, mx);
+        g.fillStyle = B.close[i] >= B.open[i] ? col.up : col.down; g.globalAlpha = 0.55;
+        g.fillRect(x - Math.max(0.5, sw * 0.35), y, Math.max(1, sw * 0.7), p.y0 + p.h - 6 - y);
+      }
+      g.globalAlpha = 1;
+    } else if (p.key === 'rsi') {
+      [30, 70].forEach((lv) => { const y = Math.round(yOf(lv, 0, 100)) + 0.5; g.strokeStyle = col.grid; g.beginPath(); g.moveTo(LY.plotL, y); g.lineTo(LY.plotR, y); g.stroke(); });
+      subLine(I.rsi, a, b, (v) => yOf(v, 0, 100), col.accent);
+    } else if (p.key === 'macd') {
+      let mx = 1e-12; for (let i = a; i <= b; i++) { if (!isNaN(I.macd[i])) mx = Math.max(mx, Math.abs(I.macd[i])); if (!isNaN(I.macdSig[i])) mx = Math.max(mx, Math.abs(I.macdSig[i])); }
+      const y0 = yOf(0, -mx, mx);
+      for (let i = a; i <= b; i++) {
+        const x = idxToX(i), y = yOf(I.macd[i], -mx, mx);
+        g.fillStyle = I.macd[i] >= 0 ? col.up : col.down; g.globalAlpha = 0.6;
+        g.fillRect(x - Math.max(0.5, sw * 0.35), Math.min(y, y0), Math.max(1, sw * 0.7), Math.abs(y - y0));
+      }
+      g.globalAlpha = 1;
+      subLine(I.macdSig, a, b, (v) => yOf(v, -mx, mx), col.ink);
+    }
+    g.restore();
+    g.fillStyle = col.ink2; g.font = font(10);
+    const names = { vol: '成交量（tick）', rsi: 'RSI 14', macd: 'MACD 12, 26, 9' };
+    g.fillText(names[p.key], LY.plotL + 6, p.y0 + 10);
+    if (p.key === 'rsi') { g.fillText('70', LY.plotR + 6, yOf(70, 0, 100)); g.fillText('30', LY.plotR + 6, yOf(30, 0, 100)); }
+  }
+
+  function subLine(arr, a, b, yf, clr) {
+    g.strokeStyle = clr; g.lineWidth = 1.2; g.beginPath(); let on = false;
+    for (let i = a; i <= b; i++) {
+      const v = arr[i]; if (isNaN(v)) { on = false; continue; }
+      const x = idxToX(i), y = yf(v);
+      if (!on) { g.moveTo(x, y); on = true; } else g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  function toXY(pt) { return { x: timeToX(pt.time), y: pToY(pt.price) }; }
+
+  function renderDrawing(d, sel, isDraft) {
+    g.strokeStyle = col.accent; g.fillStyle = col.accent; g.lineWidth = sel ? 1.8 : 1.3;
+    if (isDraft) g.setLineDash([5, 4]);
+    if (d.type === 'hline') {
+      const y = Math.round(pToY(d.p1.price)) + 0.5;
+      g.beginPath(); g.moveTo(LY.plotL, y); g.lineTo(LY.plotR, y); g.stroke();
+    } else if (d.type === 'trend') {
+      const A = toXY(d.p1), Bp = toXY(d.p2);
+      g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(Bp.x, Bp.y); g.stroke();
+    } else if (d.type === 'fib') {
+      const A = toXY(d.p1), Bp = toXY(d.p2);
+      const xL = Math.min(A.x, Bp.x);
+      g.save(); g.setLineDash([3, 3]); g.globalAlpha = 0.6; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(Bp.x, Bp.y); g.stroke(); g.restore();
+      if (isDraft) g.setLineDash([5, 4]);
+      g.font = font(10, 500); g.textAlign = 'left'; g.textBaseline = 'bottom';
+      FIB_LEVELS.forEach((lv) => {
+        const price = d.p2.price + (d.p1.price - d.p2.price) * lv;
+        const y = Math.round(pToY(price)) + 0.5;
+        const key = lv === 0.382 || lv === 0.5 || lv === 0.618;
+        g.globalAlpha = key ? 0.95 : 0.55; g.lineWidth = key ? 1.3 : 1;
+        g.beginPath(); g.moveTo(xL, y); g.lineTo(LY.plotR, y); g.stroke();
+        g.fillText((lv * 100).toFixed(lv === 0 || lv === 1 ? 0 : 1) + '  ' + fmtP(price), xL + 4, y - 2);
+      });
+      g.globalAlpha = 1;
+    }
+    g.setLineDash([]);
+    if (sel && !isDraft) {
+      const pts = d.type === 'hline' ? [d.p1] : [d.p1, d.p2];
+      pts.forEach((pt) => {
+        const P = d.type === 'hline' ? { x: Math.max(LY.plotL + 20, Math.min(LY.plotR - 20, idxToX(state.dec) - 40)), y: pToY(pt.price) } : toXY(pt);
+        g.fillStyle = col.bg; g.strokeStyle = col.accent; g.lineWidth = 1.5;
+        g.beginPath(); g.arc(P.x, P.y, 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
+      });
+    }
+  }
+
+  function drawCrosshair() {
+    const h = state.hover; if (!h || state.drag) return;
+    if (h.x < LY.plotL || h.x > LY.plotR || h.y > LY.timeY) return;
+    const i = Math.round(xToIdxF(h.x) - 0.5);
+    const x = Math.round(idxToX(i)) + 0.5;
+    const lastAllowed = state.phase === 'revealed' ? state.B.n - 1 : state.dec;
+    g.strokeStyle = col.ink2; g.globalAlpha = 0.5; g.lineWidth = 1; g.setLineDash([2, 3]);
+    if (i >= 0 && i <= lastAllowed) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, LY.timeY); g.stroke(); }
+    if (h.y >= LY.main.y0 && h.y <= LY.main.y0 + LY.main.h) {
+      const y = Math.round(h.y) + 0.5;
+      g.beginPath(); g.moveTo(LY.plotL, y); g.lineTo(LY.plotR, y); g.stroke();
+      g.setLineDash([]); g.globalAlpha = 1;
+      priceTag(yToP(h.y), col.ink2, col.bg);
+    }
+    g.setLineDash([]); g.globalAlpha = 1;
+    if (i >= 0 && i <= lastAllowed) {
+      const lbl = timeLabel(state.B.time[i]);
+      g.font = font(11, 500);
+      const tw = g.measureText(lbl).width + 12;
+      g.fillStyle = col.ink2; g.fillRect(x - tw / 2, LY.timeY + 2, tw, LY.timeH - 4);
+      g.fillStyle = col.bg; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(lbl, x, LY.timeY + LY.timeH / 2);
+    }
+  }
+
+  function drawReadout() {
+    const B = state.B, I = state.I;
+    let i = state.dec;
+    if (state.hover && state.hover.x < LY.plotR) {
+      const k = Math.round(xToIdxF(state.hover.x) - 0.5);
+      const lastAllowed = state.phase === 'revealed' ? B.n - 1 : state.dec;
+      if (k >= 0 && k <= lastAllowed) i = k;
+    }
+    const pip = pipSize();
+    const parts = [
+      ['开', fmtP(B.open[i])], ['高', fmtP(B.high[i])], ['低', fmtP(B.low[i])], ['收', fmtP(B.close[i])],
+      ['ATR 14', isNaN(I.atr[i]) ? '–' : (I.atr[i] / pip).toFixed(1) + ' pip']
+    ];
+    if (S.showTime) parts.unshift(['', hhmm(B.time[i])]);
+    g.font = font(11); g.textAlign = 'left'; g.textBaseline = 'top';
+    let x = LY.plotL + 8;
+    let y = LY.main.y0 + 6;
+    const tfName = 'M' + state.tf;
+    g.fillStyle = col.ink; g.font = font(11, 600); g.fillText(tfName, x, y); x += g.measureText(tfName).width + 10;
+    parts.forEach(([k, v]) => {
+      g.font = font(11);
+      const kw = k ? g.measureText(k).width + 4 : 0;
+      g.font = font(11, 500);
+      const vw = g.measureText(v).width;
+      if (x + kw + vw > LY.plotR - 8) { x = LY.plotL + 8; y += 16; }
+      if (k) { g.font = font(11); g.fillStyle = col.ink2; g.fillText(k, x, y); x += kw; }
+      g.font = font(11, 500); g.fillStyle = col.ink; g.fillText(v, x, y); x += vw + 10;
+    });
+    const legend = [];
+    if (state.ind.ema20) legend.push(['EMA 20', col.accent, I.ema20[i]]);
+    if (state.ind.ema50) legend.push(['EMA 50', col.ink, I.ema50[i]]);
+    let lx = LY.plotL + 8;
+    legend.forEach(([n, c, v]) => {
+      g.fillStyle = c; g.font = font(11, 500);
+      const txt = n + ' ' + (isNaN(v) ? '–' : fmtP(v));
+      g.fillText(txt, lx, y + 16); lx += g.measureText(txt).width + 12;
+    });
+  }
+
+  /* ---------- pointer interaction ---------- */
+  function localPos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  function inMain(p) { return p.x >= LY.plotL && p.x <= LY.plotR && p.y >= LY.main.y0 && p.y <= LY.main.y0 + LY.main.h; }
+  function inPlot(p) { return p.x >= LY.plotL && p.x <= LY.plotR && p.y <= LY.timeY; }
+
+  function ptFromPos(p) {
+    let time = xToTime(p.x), price = yToP(p.y);
+    if (state.magnet) {
+      const i = Math.round(xToIdxF(p.x) - 0.5);
+      const lastAllowed = state.phase === 'revealed' ? state.B.n - 1 : state.dec;
+      if (i >= 0 && i <= lastAllowed) {
+        const B = state.B;
+        let best = null, bd = state.touch ? 24 : 14;
+        [B.open[i], B.high[i], B.low[i], B.close[i]].forEach((v) => { const d = Math.abs(pToY(v) - p.y); if (d < bd) { bd = d; best = v; } });
+        if (best != null) { price = best; time = B.time[i] + B.step / 2; }
+      }
+    }
+    return { time, price };
+  }
+
+  const tolPx = () => (state.touch ? 14 : 6);
+
+  function distSeg(p, A, B) {
+    const dx = B.x - A.x, dy = B.y - A.y, L2 = dx * dx + dy * dy;
+    let t = L2 ? ((p.x - A.x) * dx + (p.y - A.y) * dy) / L2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (A.x + t * dx), p.y - (A.y + t * dy));
+  }
+
+  function hitDrawing(p) {
+    for (let i = state.drawings.length - 1; i >= 0; i--) {
+      const d = state.drawings[i];
+      if (d.type === 'hline') { if (Math.abs(pToY(d.p1.price) - p.y) < tolPx()) return i; }
+      else if (d.type === 'trend') { if (distSeg(p, toXY(d.p1), toXY(d.p2)) < tolPx()) return i; }
+      else if (d.type === 'fib') {
+        const A = toXY(d.p1), Bp = toXY(d.p2);
+        if (distSeg(p, A, Bp) < tolPx()) return i;
+        const xL = Math.min(A.x, Bp.x);
+        if (p.x >= xL - 4) {
+          for (const lv of FIB_LEVELS) { const y = pToY(d.p2.price + (d.p1.price - d.p2.price) * lv); if (Math.abs(y - p.y) < tolPx() - 1) return i; }
+        }
+      }
+    }
+    return -1;
+  }
+
+  function hitHandle(p) {
+    const i = state.selected; if (i < 0) return -1;
+    const d = state.drawings[i];
+    if (d.type === 'hline') return -1;
+    if (Math.hypot(toXY(d.p1).x - p.x, toXY(d.p1).y - p.y) < tolPx() + 4) return 1;
+    if (Math.hypot(toXY(d.p2).x - p.x, toXY(d.p2).y - p.y) < tolPx() + 4) return 2;
+    return -1;
+  }
+
+  function finalizeDraft() {
+    const d = state.draft; if (!d) return;
+    state.draft = null;
+    state.drawings.push({ type: d.type, p1: d.p1, p2: d.p2 });
+    state.selected = state.drawings.length - 1;
+    setTool('select');
+  }
+
+  const activePointers = new Map();
+  const pinchDist = () => { const v = Array.from(activePointers.values()); return Math.hypot(v[0].x - v[1].x, v[0].y - v[1].y) || 1; };
+  cv.addEventListener('pointerdown', (e) => {
+    if (!state.B || !state.q) return;
+    const p = localPos(e);
+    state.touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+    activePointers.set(e.pointerId, p);
+    if (activePointers.size === 2) {
+      // two fingers: pinch to zoom, and drop whatever the first finger started
+      state.drag = null;
+      if (state.draft && !state.draft.waiting) state.draft = null;
+      state.pinch = { d0: pinchDist(), count0: state.view.count };
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      draw(); return;
+    }
+    if (activePointers.size > 2) return;
+    if (!inPlot(p)) return;
+    cv.setPointerCapture(e.pointerId);
+    const tool = state.tool;
+    if ((tool === 'trend' || tool === 'fib') && inMain(p)) {
+      const pt = ptFromPos(p);
+      if (state.draft && state.draft.waiting) { state.draft.p2 = pt; finalizeDraft(); draw(); return; }
+      state.draft = { type: tool, p1: pt, p2: pt, waiting: false };
+      state.drag = { mode: 'place', x0: p.x, y0: p.y };
+      draw(); return;
+    }
+    if (tool === 'hline' && inMain(p)) {
+      state.drawings.push({ type: 'hline', p1: ptFromPos(p) });
+      state.selected = state.drawings.length - 1;
+      setTool('select'); draw(); return;
+    }
+    if (inMain(p)) {
+      const hh = hitHandle(p);
+      if (hh > 0) { state.drag = { mode: 'handle', which: hh }; return; }
+      const hit = hitDrawing(p);
+      if (hit >= 0) {
+        state.selected = hit;
+        const d = state.drawings[hit];
+        state.drag = { mode: 'move', x0: p.x, y0: p.y, orig: JSON.parse(JSON.stringify(d)), t0: xToTime(p.x), pr0: yToP(p.y) };
+        draw(); return;
+      }
+    }
+    state.selected = -1;
+    state.drag = { mode: 'pan', x0: p.x, end0: state.view.end };
+    draw();
+  });
+
+  cv.addEventListener('pointermove', (e) => {
+    if (!state.B) return;
+    const p = localPos(e);
+    if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, p);
+    if (state.pinch && activePointers.size >= 2) {
+      state.view.count = clampCount(state.pinch.count0 * state.pinch.d0 / pinchDist());
+      setEnd(state.view.end); draw(); return;
+    }
+    if (e.pointerType !== 'touch') state.hover = p;
+    const dr = state.drag;
+    if (dr && dr.mode === 'pan') {
+      const shift = Math.round((dr.x0 - p.x) / slotW());
+      if (e.pointerType === 'touch' && Math.abs(dr.x0 - p.x) > 6) state.hover = null;
+      setEnd(dr.end0 + shift);
+    } else if (dr && dr.mode === 'place' && state.draft) {
+      state.draft.p2 = ptFromPos(p);
+    } else if (dr && dr.mode === 'handle') {
+      const d = state.drawings[state.selected];
+      if (d) d['p' + dr.which] = ptFromPos(p);
+    } else if (dr && dr.mode === 'move') {
+      const d = state.drawings[state.selected];
+      if (d) {
+        const dt = xToTime(p.x) - dr.t0, dp = yToP(p.y) - dr.pr0;
+        d.p1 = { time: dr.orig.p1.time + dt, price: dr.orig.p1.price + dp };
+        if (dr.orig.p2) d.p2 = { time: dr.orig.p2.time + dt, price: dr.orig.p2.price + dp };
+      }
+    } else if (state.draft && state.draft.waiting) {
+      state.draft.p2 = ptFromPos(p);
+    }
+    draw();
+  });
+
+  const endPinch = (e) => {
+    activePointers.delete(e.pointerId);
+    if (!state.pinch) return false;
+    if (activePointers.size < 2) { state.pinch = null; state.drag = null; }
+    draw();
+    return true;
+  };
+  cv.addEventListener('pointerup', (e) => {
+    if (endPinch(e)) return;
+    const dr = state.drag; state.drag = null;
+    const p = localPos(e);
+    if (dr && dr.mode === 'place' && state.draft) {
+      if (Math.hypot(p.x - dr.x0, p.y - dr.y0) > 5) finalizeDraft();
+      else state.draft.waiting = true;
+    }
+    // on touch screens a tap that does not move puts the crosshair there
+    if (e.pointerType === 'touch' && dr && dr.mode === 'pan' && Math.abs(p.x - dr.x0) < 6) state.hover = p;
+    draw();
+  });
+  cv.addEventListener('pointercancel', (e) => { activePointers.delete(e.pointerId); state.pinch = null; state.drag = null; draw(); });
+  cv.addEventListener('pointerleave', (e) => { if (e.pointerType === 'touch') return; state.hover = null; draw(); });
+  cv.addEventListener('wheel', (e) => {
+    if (!state.B) return;
+    e.preventDefault();
+    zoom(e.deltaY > 0 ? 1.12 : 1 / 1.12);
+  }, { passive: false });
+
+  function setEnd(v) {
+    const maxEnd = state.phase === 'revealed' ? state.B.n - 1 : state.dec;
+    const minEnd = Math.min(maxEnd, state.view.count - 1);
+    state.view.end = Math.max(minEnd, Math.min(maxEnd, v));
+  }
+  function zoom(f) {
+    state.view.count = clampCount(state.view.count * f);
+    setEnd(state.view.end);
+    draw();
+  }
+
+  /* ---------- toolbar & strip ---------- */
+  function setTool(t) {
+    state.tool = t;
+    if (t !== 'trend' && t !== 'fib') state.draft = null;
+    $$('.tool[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === t)));
+    cv.style.cursor = t === 'select' ? 'default' : 'crosshair';
+  }
+  $$('.tool[data-tool]').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
+  $('#btnDelDrawing').addEventListener('click', deleteSelected);
+  $('#btnClearDrawings').addEventListener('click', () => { state.drawings = []; state.selected = -1; state.draft = null; draw(); });
+  function deleteSelected() {
+    if (state.selected < 0) { toast('先点选一个图形'); return; }
+    state.drawings.splice(state.selected, 1); state.selected = -1; draw();
+  }
+
+  $$('#tfSeg button').forEach((b) => b.addEventListener('click', () => setTf(+b.dataset.tf)));
+  function setTf(tf) {
+    if (!state.q || tf === state.tf) return;
+    state.tf = tf;
+    $$('#tfSeg button').forEach((x) => x.setAttribute('aria-pressed', String(+x.dataset.tf === tf)));
+    rebuild();
+    if (state.phase === 'revealed') {
+      const future = state.B.n - 1 - state.dec, padSlots = padCount();
+      state.view.end = future > padSlots ? Math.min(state.B.n - 1, state.dec + future - padSlots) : state.dec;
+    } else state.view.end = state.dec;
+    setEnd(state.view.end);
+    draw();
+  }
+
+  function syncChips() {
+    $$('#indChips .chip').forEach((b) => b.setAttribute('aria-pressed', String(!!state.ind[b.dataset.ind])));
+  }
+  $$('#indChips .chip').forEach((b) => b.addEventListener('click', () => {
+    const k = b.dataset.ind; state.ind[k] = !state.ind[k];
+    store.set('blindlab:ind', state.ind);
+    syncChips(); layout(); draw();
+  }));
+  syncChips();
+  $('#zoomIn').addEventListener('click', () => zoom(1 / 1.25));
+  $('#zoomOut').addEventListener('click', () => zoom(1.25));
+  $('#magnet').addEventListener('click', () => { state.magnet = !state.magnet; $('#magnet').setAttribute('aria-pressed', String(state.magnet)); });
+
+  $$('#confSeg button').forEach((b) => b.addEventListener('click', () => setConf(+b.dataset.conf)));
+  function setConf(c) { state.conf = c; $$('#confSeg button').forEach((x) => x.setAttribute('aria-pressed', String(+x.dataset.conf === c))); }
+
+  $$('.key[data-dir]').forEach((b) => b.addEventListener('click', () => { b.blur(); decide(+b.dataset.dir); }));
+  $$('.key[data-dir]').forEach((b) => {
+    const d = +b.dataset.dir;
+    const on = () => { state.previewDir = d === 0 ? null : d; draw(); };
+    const off = () => { state.previewDir = null; draw(); };
+    b.addEventListener('mouseenter', on); b.addEventListener('mouseleave', off);
+    b.addEventListener('focus', on); b.addEventListener('blur', off);
+  });
+  $('#btnNext').addEventListener('click', nextQuestion);
+  $('#btnUndoLabel').addEventListener('click', undoLabel);
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener('keydown', (e) => {
+    if ($('#quizView').hidden) return;
+    if (document.querySelector('dialog[open]')) return;
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    if (typing) { if (e.key === 'Escape') e.target.blur(); return; }
+    const k = e.key;
+    if (tag === 'BUTTON' && (k === 'Enter' || k === ' ')) return;
+    if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) {
+      e.preventDefault();
+      if (state.drawings.length) { state.drawings.pop(); state.selected = -1; draw(); }
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (state.phase === 'revealed') {
+      if (k === 'Enter' || k === ' ') { e.preventDefault(); nextQuestion(); }
+      return;
+    }
+    if (state.phase !== 'quiz') return;
+    const map = { l: 1, L: 1, ArrowUp: 1, s: -1, S: -1, ArrowDown: -1, n: 0, N: 0 };
+    if (k in map) { e.preventDefault(); decide(map[k]); return; }
+    if (k === '1' || k === '2' || k === '3') { setConf(+k); return; }
+    if (k === 'v' || k === 'V') setTool('select');
+    else if (k === 't' || k === 'T') setTool('trend');
+    else if (k === 'h' || k === 'H') setTool('hline');
+    else if (k === 'f' || k === 'F') setTool('fib');
+    else if (k === 'Escape') { state.draft = null; state.selected = -1; setTool('select'); draw(); }
+    else if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); deleteSelected(); }
+    else if (k === '/') { e.preventDefault(); $('#noteInput').focus(); }
+    else if (k === '+' || k === '=') zoom(1 / 1.25);
+    else if (k === '-' || k === '_') zoom(1.25);
+  });
+
+  /* ---------- statistics ---------- */
+  function getBaseline(key) {
+    const ck = key + '|' + pipSize() + '|' + pointSize();
+    if (!state.baseCache.has(ck)) state.baseCache.set(ck, C.baseline(state.D, cfgFromKey(key), pipSize(), pointSize(), 3000));
+    return state.baseCache.get(ck);
+  }
+
+  function computeStats(h) {
+    const D = state.D, pip = pipSize(), point = pointSize(), slip = +S.slip || 0;
+    const hj = HS.indexOf(h);
+    const rows = { all: [], long: [], short: [], c3: [], c2: [], c1: [] };
+    const recs = [];
+    state.labels.forEach((l) => {
+      if (l.dir === 0 || l.t + 1 + HMAX >= D.n) return;
+      const base = getBaseline(l.cfg);
+      const mu = base.mu.get(l.ctx);
+      const lg = C.longGross(D, l.t, h, pip, point);
+      const gross = l.dir * lg;
+      const excess = l.dir * (lg - (mu ? mu.m[hj] : 0));
+      const net = gross - C.costPips(D, l.t, h, pip, point, slip);
+      const st = stopsPips(l.t), tpv = st.tp, slv = st.sl;
+      const bu = C.barrier(D, l.t, l.dir, tpv, slv, pip, point, slip);
+      const bl = C.barrier(D, l.t, 1, tpv, slv, pip, point, slip), bs = C.barrier(D, l.t, -1, tpv, slv, pip, point, slip);
+      const ex = (b) => b.mfe - b.mae;
+      const r = { gross, excess, net, R: bu.r, Rrand: (bl.r + bs.r) / 2, Rx: bu.r - (bl.r + bs.r) / 2, how: bu.how, exc: ex(bu) - (ex(bl) + ex(bs)) / 2, tp: tpv, sl: slv };
+      recs.push(r);
+      rows.all.push(r);
+      rows[l.dir === 1 ? 'long' : 'short'].push(r);
+      rows['c' + (l.conf || 2)].push(r);
+    });
+    const sum = (arr) => ({
+      gross: C.summarize(arr.map((r) => r.gross)),
+      excess: C.summarize(arr.map((r) => r.excess)),
+      net: C.summarize(arr.map((r) => r.net)),
+      R: C.summarize(arr.map((r) => r.R)),
+      Rrand: C.summarize(arr.map((r) => r.Rrand)),
+      Rx: C.summarize(arr.map((r) => r.Rx)),
+      exc: C.summarize(arr.map((r) => r.exc)),
+      tpRate: arr.length ? arr.filter((r) => r.how === 'tp').length / arr.length : NaN,
+      slRate: arr.length ? arr.filter((r) => r.how === 'sl').length / arr.length : NaN
+    });
+    const out = {};
+    Object.keys(rows).forEach((k) => { out[k] = sum(rows[k]); });
+    // controls: mechanical rules on all spike-mode questions (including skipped ones)
+    const fade = [], follow = [], costs = [];
+    state.labels.forEach((l) => {
+      if (l.t + 1 + HMAX >= D.n) return;
+      const c = C.costPips(D, l.t, h, pip, point, slip);
+      if (l.dir !== 0) costs.push(c);
+      if (!l.ctx) return;
+      const lg = C.longGross(D, l.t, h, pip, point);
+      fade.push(-l.ctx * lg - c); follow.push(l.ctx * lg - c);
+    });
+    out.fade = C.summarize(fade); out.follow = C.summarize(follow);
+    out.avgCost = costs.length ? costs.reduce((s, v) => s + v, 0) / costs.length : NaN;
+    out.skips = state.labels.filter((l) => l.dir === 0).length;
+    out.avgTp = recs.length ? recs.reduce((a, r) => a + r.tp, 0) / recs.length : NaN;
+    out.avgSl = recs.length ? recs.reduce((a, r) => a + r.sl, 0) / recs.length : NaN;
+    return out;
+  }
+
+  const f1 = (v, d) => (v == null || isNaN(v) ? '–' : sgn(v, d == null ? 2 : d));
+  const ft = (v) => (v == null || isNaN(v) ? '–' : (v < 0 ? '−' : '') + Math.abs(v).toFixed(2));
+  const fpct = (v) => (v == null || isNaN(v) ? '–' : Math.round(v * 100) + '%');
+
+  function renderStats() {
+    const el = $('#statsInner');
+    if (!state.D) { el.innerHTML = ''; return; }
+    const h = state.horizon;
+    const s = computeStats(h);
+    const n = s.all.net.n || 0;
+    let verdict;
+    if (n < 100) verdict = '方向题还不到 100 道（现在 ' + n + ' 道），下面的数字只能作参考。';
+    else if (s.all.net.t > 3 && s.all.net.mean > 0) verdict = '扣除成本后的平均收益显著为正（t = ' + ft(s.all.net.t) + '），值得把这些判断拆成可计算的特征。';
+    else if (s.all.excess.t > 2) verdict = '相对随机基准有方向判断力（超额 t = ' + ft(s.all.excess.t) + '），但扣除成本后还不够显著。';
+    else verdict = '目前看不出你的判断优于同一批时刻的随机方向。';
+
+    const row = (name, r) => '<tr><td>' + name + '</td><td>' + (r.net.n || 0) + '</td><td>' + f1(r.gross.mean) + '</td><td>' + f1(r.excess.mean) +
+      '</td><td>' + ft(r.excess.t) + '</td><td class="' + (r.net.mean > 0 ? 'pos' : r.net.mean < 0 ? 'neg' : '') + '">' + f1(r.net.mean) +
+      '</td><td>' + ft(r.net.t) + '</td><td>' + fpct(r.net.win) + '</td><td>' + (isNaN(r.net.lo) || r.net.lo == null ? '–' : f1(r.net.lo) + ' ～ ' + f1(r.net.hi)) + '</td></tr>';
+
+    const ctrl = (name, r) => '<tr><td>' + name + '</td><td>' + (r.n || 0) + '</td><td class="' + (r.mean > 0 ? 'pos' : r.mean < 0 ? 'neg' : '') + '">' + f1(r.mean) + '</td><td>' + ft(r.t) + '</td><td>' + fpct(r.win) + '</td></tr>';
+
+    let html = '<h2>你的盘感统计</h2>';
+    html += '<p>入场为决策后下一根 M1 的开盘中间价，持有 ' + h + ' 分钟。单位都是 pip。超额 = 你的方向收益减去同一抽题方式下随机时刻的平均漂移；净值 = 扣掉点差和每边 ' + (+S.slip || 0) + ' pip 滑点之后。</p>';
+    html += '<div class="row"><span class="seg" id="hSeg">' + HS.map((x) => '<button data-h="' + x + '" aria-pressed="' + (x === h) + '">' + x + ' 分钟</button>').join('') + '</span>' +
+      '<button class="btn primary" id="btnExport">导出标注 CSV</button></div>';
+    html += '<p class="summary">' + verdict + '</p>';
+    html += '<h3>你的判断</h3><div class="tablewrap"><table><thead><tr><th>分组</th><th>笔数</th><th>毛收益</th><th>超额</th><th>超额 t</th><th>净收益</th><th>净 t</th><th>净胜率</th><th>净收益 95% 区间</th></tr></thead><tbody>' +
+      row('全部方向题', s.all) + row('做多', s.long) + row('做空', s.short) + row('把握 3', s.c3) + row('把握 2', s.c2) + row('把握 1', s.c1) + '</tbody></table></div>';
+    const stopText = S.stopMode === 'pips' ? '止盈 ' + (+S.tp || 10) + ' pip、止损 ' + (+S.sl || 10) + ' pip' :
+      '止盈 ' + (+S.tpMult || 2) + ' × ATR、止损 ' + (+S.slMult || 1.5) + ' × ATR（M' + (+S.atrTf || 1) + ' 的 ATR 14，这批题平均约为 ' +
+      (isNaN(s.avgTp) ? '–' : s.avgTp.toFixed(1)) + ' pip 和 ' + (isNaN(s.avgSl) ? '–' : s.avgSl.toFixed(1)) + ' pip）';
+    const brow = (name, r) => '<tr><td>' + name + '</td><td>' + (r.R.n || 0) + '</td><td>' + fpct(r.tpRate) + '</td><td>' + fpct(r.slRate) +
+      '</td><td class="' + (r.R.mean > 0 ? 'pos' : r.R.mean < 0 ? 'neg' : '') + '">' + f1(r.R.mean) + '</td><td>' + ft(r.R.t) + '</td><td>' + f1(r.Rrand.mean) +
+      '</td><td>' + f1(r.Rx.mean) + '</td><td>' + ft(r.Rx.t) + '</td><td>' + f1(r.exc.mean, 1) + '</td><td>' + ft(r.exc.t) + '</td></tr>';
+    const bx = s.all.Rx;
+    html += '<h3>按止盈止损计算</h3><p>' + stopText + '，从入场成交价算起，最长持有 60 分钟，同一根 K 线里两边都碰到时按止损算；R 已扣除点差和滑点。“随机方向 R”是同一时刻做多和做空的平均结果，超额 R 是你选的方向比它多出来的部分。最后两列与止盈止损的设定无关：60 分钟内的最大有利波动减去最大不利波动，同样与随机方向比较。</p>';
+    html += '<div class="tablewrap"><table><thead><tr><th>分组</th><th>笔数</th><th>先到止盈</th><th>先到止损</th><th>平均 R</th><th>R 的 t</th><th>随机方向 R</th><th>超额 R</th><th>超额 t</th><th>有利减不利（pip）</th><th>t</th></tr></thead><tbody>' +
+      brow('全部方向题', s.all) + brow('做多', s.long) + brow('做空', s.short) + brow('把握 3', s.c3) + brow('把握 2', s.c2) + brow('把握 1', s.c1) + '</tbody></table></div>';
+    if (bx.n) html += '<p class="summary">' + (bx.n < 100 ? '方向题不到 100 道，先看个大概：' : '') + '按止盈止损计算，你选的方向比随机方向平均' + (bx.mean >= 0 ? '多 ' : '少 ') + Math.abs(bx.mean).toFixed(2) + ' R（t = ' + ft(bx.t) + '）。</p>';
+    html += '<h3>对照</h3><p>随机方向在同一批时刻的期望毛收益为 0，扣成本后约为 ' + (isNaN(s.avgCost) ? '–' : '−' + s.avgCost.toFixed(2)) + ' pip。急涨急跌题还会给出两条机械规则：每次都反向，和每次都顺势。你的判断至少要好过这两条，才说明“挑选”本身有价值。</p>';
+    html += '<div class="tablewrap"><table><thead><tr><th>规则</th><th>笔数</th><th>净收益</th><th>净 t</th><th>净胜率</th></tr></thead><tbody>' +
+      ctrl('急涨急跌后每次都反向', s.fade) + ctrl('急涨急跌后每次都顺势', s.follow) + '</tbody></table></div>';
+    html += '<p style="margin-top:16px">不做的题：' + s.skips + ' 道。随机基准每种抽题方式各取 3,000 个时刻估算。</p>';
+    el.innerHTML = html;
+    $$('#hSeg button').forEach((b) => b.addEventListener('click', () => { state.horizon = +b.dataset.h; renderStats(); }));
+    $('#btnExport').addEventListener('click', exportCsv);
+  }
+
+  /* ---------- export ---------- */
+  function csvCell(v) {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function buildCsv() {
+    const D = state.D, pip = pipSize(), point = pointSize(), slip = +S.slip || 0;
+    const head = ['id', 'server_time', 'bar_index', 'decision', 'confidence', 'decision_seconds', 'timeframe', 'indicators', 'sampling', 'context',
+      'close_bid', 'spread_points', 'long_gross15', 'long_gross30', 'long_gross60', 'net15', 'net30', 'net60', 'note', 'drawings',
+      'tp_pips', 'sl_pips', 'exit', 'r_multiple', 'mfe_pips', 'mae_pips'];
+    const lines = [head.join(',')];
+    state.labels.forEach((l) => {
+      const ok = l.t + 1 + HMAX < D.n;
+      const lg = HS.map((h) => (ok ? C.longGross(D, l.t, h, pip, point) : NaN));
+      const net = HS.map((h, j) => (ok && l.dir !== 0 ? l.dir * lg[j] - C.costPips(D, l.t, h, pip, point, slip) : NaN));
+      const fx = (v) => (isNaN(v) ? '' : v.toFixed(2));
+      const st = stopsPips(l.t), tpv = st.tp, slv = st.sl;
+      const b = ok && l.dir !== 0 ? C.barrier(D, l.t, l.dir, tpv, slv, pip, point, slip) : null;
+      const drawings = (l.draw || []).map((d) => ({ type: d.type, p1: { time: ymdhm(d.p1.time), price: +d.p1.price.toFixed(6) }, p2: d.p2 ? { time: ymdhm(d.p2.time), price: +d.p2.price.toFixed(6) } : null }));
+      lines.push([
+        l.id, ymdhm(l.time), l.t, l.dir === 1 ? 'long' : l.dir === -1 ? 'short' : 'none', l.conf, (l.ms / 1000).toFixed(1), 'M' + l.tf, l.ind,
+        JSON.parse(l.cfg).mode, l.ctx === 1 ? 'spike_up' : l.ctx === -1 ? 'spike_down' : '',
+        D.close[l.t], D.spread[l.t], fx(lg[0]), fx(lg[1]), fx(lg[2]), fx(net[0]), fx(net[1]), fx(net[2]), l.note || '', JSON.stringify(drawings),
+        tpv.toFixed(2), slv.toFixed(2), b ? b.how : '', b ? b.r.toFixed(3) : '', b ? b.mfe.toFixed(2) : '', b ? b.mae.toFixed(2) : ''
+      ].map(csvCell).join(','));
+    });
+    return lines.join('\n') + '\n';
+  }
+  async function exportCsv() {
+    if (!state.labels.length) { toast('还没有记录可以导出'); return; }
+    const csv = buildCsv();
+    const fname = 'blind_labels_' + (state.name || 'data').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') + '.csv';
+    if (state.downloads) {
+      try { await state.downloads.save({ filename: fname, data: csv }); toast('已保存 ' + fname); return; }
+      catch (err) {
+        if (err && err.code === 'declined') return;
+        if (err && err.code === 'rate_limited') { toast('保存窗口已经打开，请先处理它'); return; }
+      }
+    }
+    $('#exportText').value = csv;
+    $('#exportDlg').showModal();
+    $('#exportText').select();
+  }
+
+  /* ---------- settings ---------- */
+  function openSettings() {
+    $('#sMode').value = S.mode; $('#sW').value = S.W; $('#sK').value = S.k; $('#sHours').value = S.hours;
+    $('#sSlip').value = S.slip; $('#sPip').value = S.pip; $('#sPoint').value = S.point;
+    $('#sTp').value = S.tp; $('#sSl').value = S.sl;
+    $('#sStopMode').value = S.stopMode; $('#sAtrTf').value = String(S.atrTf); $('#sTpMult').value = S.tpMult; $('#sSlMult').value = S.slMult;
+    $('#sVisible').value = S.visible; $('#sShowTime').value = S.showTime ? '1' : '0'; $('#sReveal').value = S.reveal ? '1' : '0';
+    if (state.meta) {
+      $('#sPip').placeholder = '自动（' + state.meta.pip + '）';
+      $('#sPoint').placeholder = '自动（' + state.meta.point + '）';
+    }
+    $('#settingsDlg').returnValue = '';
+    $('#settingsDlg').showModal();
+  }
+  $('#settingsDlg').addEventListener('close', () => {
+    if ($('#settingsDlg').returnValue !== 'ok') return;
+    const before = samplingKey();
+    S.mode = $('#sMode').value;
+    S.W = Math.max(3, Math.min(120, parseInt($('#sW').value, 10) || 15));
+    S.k = Math.max(1, Math.min(10, parseFloat($('#sK').value) || 3));
+    S.hours = $('#sHours').value.trim();
+    S.slip = Math.max(0, parseFloat($('#sSlip').value) || 0);
+    S.tp = Math.max(1, parseFloat($('#sTp').value) || 10);
+    S.sl = Math.max(1, parseFloat($('#sSl').value) || 10);
+    S.stopMode = $('#sStopMode').value === 'pips' ? 'pips' : 'atr';
+    S.atrTf = +$('#sAtrTf').value || 1;
+    S.tpMult = Math.max(0.1, parseFloat($('#sTpMult').value) || 2);
+    S.slMult = Math.max(0.1, parseFloat($('#sSlMult').value) || 1.5);
+    S.pip = $('#sPip').value.trim(); S.point = $('#sPoint').value.trim();
+    S.visible = clampCount(parseInt($('#sVisible').value, 10) || 150);
+    S.showTime = $('#sShowTime').value === '1';
+    S.reveal = $('#sReveal').value === '1';
+    store.set('blindlab:settings', S);
+    state.baseCache.clear();
+    if (!state.D) return;
+    if (samplingKey() !== before && state.phase === 'quiz') nextQuestion();
+    else { if (state.phase === 'revealed' && state.revealRec) renderResult(state.revealRec); draw(); }
+    if (!$('#statsView').hidden) renderStats();
+  });
+
+  /* ---------- top bar & setup wiring ---------- */
+  $('#btnSettings').addEventListener('click', openSettings);
+  $('#btnStats').addEventListener('click', () => show('stats'));
+  $('#btnQuiz').addEventListener('click', () => show('quiz'));
+  $('#btnData').addEventListener('click', () => { show('setup'); setStatus(''); });
+  $('#btnPick').addEventListener('click', () => $('#fileInput').click());
+  $('#keepData').checked = store.get('blindlab:keep') !== false;
+  $('#keepData').addEventListener('change', () => store.set('blindlab:keep', $('#keepData').checked));
+  $('#fileInput').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
+  $('#btnDemo').addEventListener('click', () => {
+    const D = C.demoData(120);
+    attachData(D, '模拟数据', 'demo');
+  });
+  const drop = $('#drop');
+  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+  /* ---------- environment ---------- */
+  readColors();
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => { readColors(); draw(); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+  }
+  new ResizeObserver(() => resize()).observe($('.chart-wrap'));
+  window.addEventListener('resize', resize);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { readColors(); draw(); });
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then((d) => { state.downloads = d || null; }).catch(() => { state.downloads = null; });
+  }
+
+  show('setup');
+})();
+</script>
+</body>
+</html>
