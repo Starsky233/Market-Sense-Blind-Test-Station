@@ -98,6 +98,7 @@ button { touch-action: manipulation; }
 .btn:hover { background: var(--accent-soft); }
 .btn.primary { background: var(--ink); color: var(--chart-bg); border-color: var(--ink); }
 .btn.primary:hover { opacity: 0.9; }
+.btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ---------- setup ---------- */
 .setup { flex: 1; overflow: auto; }
@@ -329,11 +330,12 @@ dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
         <p class="saved-note" id="storageNote"></p>
       </section>
       <div class="drop" id="drop">
-        <h2>选择 M1 数据文件</h2>
+        <h2>选择 M1 数据</h2>
         <p class="formats">支持 MT5 导出的 CSV（&lt;DATE&gt; &lt;TIME&gt; &lt;OPEN&gt; &lt;HIGH&gt; &lt;LOW&gt; &lt;CLOSE&gt; &lt;TICKVOL&gt; &lt;VOL&gt; &lt;SPREAD&gt;），也支持 pandas 导出的 time, open, high, low, close, tick_volume, spread。价格按 bid 处理，点差按 points。文件只在你的浏览器里读取，不会上传。</p>
         <div class="row">
           <input type="file" id="fileInput" accept=".csv,.txt,text/csv" hidden>
-          <button class="btn primary" id="btnPick">选择文件</button>
+          <button class="btn primary" id="btnHosted" title="USDJPY_M1_last_year.csv，2025-11-11 至 2026-11-10，约 25 MB">载入 USDJPY 一年 M1 数据</button>
+          <button class="btn" id="btnPick">选择自己的文件</button>
           <button class="btn" id="btnDemo">用模拟数据试用</button>
           <span class="muted note">也可以把文件拖到这里</span>
         </div>
@@ -1049,6 +1051,48 @@ window.BlindCore = (() => {
     } catch (err) {
       bar.hidden = true;
       setStatus(err && err.message ? err.message : '读取失败，请确认文件格式。', true);
+    }
+  }
+
+  /* ---------- data file published next to this page ---------- */
+  const HOSTED_CSV = 'USDJPY_M1_last_year.csv';
+  let hostedBusy = false;
+  async function loadHosted() {
+    if (hostedBusy) return;
+    hostedBusy = true;
+    const btn = $('#btnHosted'), bar = $('#loadBar');
+    btn.disabled = true;
+    setStatus('正在下载 ' + HOSTED_CSV + ' …');
+    try {
+      const res = await fetch(HOSTED_CSV);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      // when the server compresses the file, content-length is the compressed size, so only trust it for plain responses
+      const len = res.headers.get('content-encoding') ? 0 : (+res.headers.get('content-length') || 0);
+      bar.hidden = !len; bar.firstElementChild.style.width = '0%';
+      let file;
+      if (res.body && res.body.getReader) {
+        const reader = res.body.getReader(), chunks = [];
+        let got = 0, shown = 0;
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          chunks.push(value); got += value.length;
+          if (got - shown > 262144) {
+            shown = got;
+            setStatus('正在下载 ' + HOSTED_CSV + ' … ' + (got / 1048576).toFixed(1) + (len ? ' / ' + (len / 1048576).toFixed(1) : '') + ' MB');
+            if (len) bar.firstElementChild.style.width = Math.min(100, Math.round(got / len * 100)) + '%';
+          }
+        }
+        file = new File(chunks, HOSTED_CSV, { type: 'text/csv' });
+      } else {
+        file = new File([await res.blob()], HOSTED_CSV, { type: 'text/csv' });
+      }
+      await loadFile(file);
+    } catch (err) {
+      bar.hidden = true;
+      setStatus('无法从网站下载 ' + HOSTED_CSV + '（' + (err && err.message ? err.message : '网络错误') + '），可以改用“选择自己的文件”。', true);
+    } finally {
+      hostedBusy = false; btn.disabled = false;
     }
   }
 
@@ -2308,6 +2352,9 @@ window.BlindCore = (() => {
   $('#btnQuiz').addEventListener('click', () => show('quiz'));
   $('#btnData').addEventListener('click', () => { show('setup'); setStatus(''); });
   $('#btnPick').addEventListener('click', () => $('#fileInput').click());
+  $('#btnHosted').addEventListener('click', loadHosted);
+  // opened straight from disk there is no website to download from
+  if (location.protocol === 'file:') { $('#btnHosted').hidden = true; $('#btnPick').classList.add('primary'); }
   $('#keepData').checked = store.get('blindlab:keep') !== false;
   $('#keepData').addEventListener('change', () => store.set('blindlab:keep', $('#keepData').checked));
   $('#fileInput').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
