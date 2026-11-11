@@ -24,6 +24,8 @@
   --curtain: #DDE2D8;
   --hatch: rgba(23, 34, 45, 0.09);
   --future: rgba(42, 88, 160, 0.05);
+  --ema3: #B7791F;
+  --ema4: #7A4CB0;
   --font: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
@@ -46,6 +48,8 @@
     --curtain: #1C2B37;
     --hatch: rgba(227, 232, 225, 0.07);
     --future: rgba(132, 170, 227, 0.06);
+    --ema3: #E3AC52;
+    --ema4: #B596E8;
   }
 }
 :root[data-theme="dark"] {
@@ -64,6 +68,8 @@
   --curtain: #1C2B37;
   --hatch: rgba(227, 232, 225, 0.07);
   --future: rgba(132, 170, 227, 0.06);
+  --ema3: #E3AC52;
+  --ema4: #B596E8;
 }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
 html, body { height: 100%; margin: 0; }
@@ -99,6 +105,8 @@ button { touch-action: manipulation; }
 .btn.primary { background: var(--ink); color: var(--chart-bg); border-color: var(--ink); }
 .btn.primary:hover { opacity: 0.9; }
 .btn:disabled { opacity: 0.5; cursor: default; }
+.sw { display: inline-block; width: 16px; height: 0; vertical-align: middle; margin-right: 6px; }
+#btnIndParams { margin-left: 6px; border-style: dashed; }
 
 /* ---------- setup ---------- */
 .setup { flex: 1; overflow: auto; }
@@ -218,6 +226,16 @@ dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
 }
 .field .hint { grid-column: 2; font-size: 12px; color: var(--ink-2); margin-top: -6px; }
 .dlg .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+/* Save comes first in the markup so Enter saves; show it last */
+.dlg .actions .primary { order: 1; }
+.dlg .actions .left { margin-right: auto; }
+.dlg .note { font-size: 12px; color: var(--ink-2); margin: 4px 0 0; }
+.field.top { align-items: start; }
+.field.top > label { padding-top: 6px; }
+.ema-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.ema-row { display: flex; align-items: center; gap: 8px; }
+.field .ema-row input { width: 96px; }
+.ema-none { margin: 4px 0; font-size: 13px; }
 .dlg textarea {
   width: 100%; height: 260px; font: 12px/1.4 var(--font); border: 1px solid var(--rule);
   border-radius: 6px; background: var(--chart-bg); padding: 8px;
@@ -242,9 +260,16 @@ dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
 .keep { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); margin-top: 14px; cursor: pointer; }
 .keep input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
 
+/* keep the top bar on one line on smaller laptops */
+@media (max-width: 1080px) {
+  .dataset { display: none; }
+  .progress .more { display: none; }
+}
 /* phones in portrait, narrow tablets */
 @media (max-width: 760px) {
   .topbar { gap: 6px 10px; padding: 8px 12px; }
+  /* no room while answering; the language stays switchable under Settings */
+  .app:not([data-view="setup"]) #btnLang { display: none; }
   .dataset { display: none; }
   .progress .more { display: none; }
   .btn { padding: 5px 10px; }
@@ -308,113 +333,107 @@ dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
 <body>
 <div class="app">
   <header class="topbar">
-    <span class="brand">盘感盲测台</span>
+    <span class="brand" data-i18n="brand">盘感盲测台</span>
     <span class="dataset" id="datasetName"></span>
     <span class="progress" id="progress" hidden></span>
     <span class="spacer"></span>
-    <button class="btn" id="btnQuiz" hidden>返回答题</button>
-    <button class="btn" id="btnStats" hidden>统计</button>
-    <button class="btn" id="btnSettings">设置</button>
-    <button class="btn" id="btnData" hidden>换数据</button>
+    <button class="btn" id="btnQuiz" hidden data-i18n="backToQuiz">返回答题</button>
+    <button class="btn" id="btnStats" hidden data-i18n="stats">统计</button>
+    <button class="btn" id="btnSettings" data-i18n="settings">设置</button>
+    <button class="btn" id="btnData" hidden data-i18n="changeData">换数据</button>
+    <button class="btn" id="btnLang" lang="en" data-i18n="langSwitch" data-i18n-aria="langSwitchAria">English</button>
   </header>
 
   <!-- ===== setup ===== -->
   <main class="setup" id="setupView">
     <div class="setup-inner">
-      <h1>先验证盘感，再谈规则</h1>
-      <p>从历史 M1 数据里随机抽一个时刻，只给你看到这一刻为止的走势，日期隐藏。你判断做多、做空或不做，系统记下来；攒够几百题后，统计你的判断扣掉成本后还剩多少。</p>
-      <p>每题的入场价是决策那根 K 线之后下一根的开盘中间价，结果按 15、30、60 分钟后的中间价计算，成本 = 入场和出场点差的一半之和 + 两边滑点。</p>
+      <h1 data-i18n="setupTitle">先验证盘感，再谈规则</h1>
+      <p data-i18n="setupP1">从历史 M1 数据里随机抽一个时刻，只给你看到这一刻为止的走势，日期隐藏。你判断做多、做空或不做，系统记下来；攒够几百题后，统计你的判断扣掉成本后还剩多少。</p>
+      <p data-i18n="setupP2">每题的入场价是决策那根 K 线之后下一根的开盘中间价，结果按 15、30、60 分钟后的中间价计算，成本 = 入场和出场点差的一半之和 + 两边滑点。另外按止盈止损算一次：一直持有到其中一边被触发，没有时间上限。</p>
       <section class="saved" id="savedBox" hidden>
-        <h2>保存在这个浏览器里的数据</h2>
+        <h2 data-i18n="savedTitle">保存在这个浏览器里的数据</h2>
         <ul class="saved-list" id="savedList"></ul>
         <p class="saved-note" id="storageNote"></p>
       </section>
       <div class="drop" id="drop">
-        <h2>选择 M1 数据</h2>
-        <p class="formats">支持 MT5 导出的 CSV（&lt;DATE&gt; &lt;TIME&gt; &lt;OPEN&gt; &lt;HIGH&gt; &lt;LOW&gt; &lt;CLOSE&gt; &lt;TICKVOL&gt; &lt;VOL&gt; &lt;SPREAD&gt;），也支持 pandas 导出的 time, open, high, low, close, tick_volume, spread。价格按 bid 处理，点差按 points。文件只在你的浏览器里读取，不会上传。</p>
+        <h2 data-i18n="dropTitle">选择 M1 数据</h2>
+        <p class="formats" data-i18n="formats">支持 MT5 导出的 CSV（&lt;DATE&gt; &lt;TIME&gt; &lt;OPEN&gt; &lt;HIGH&gt; &lt;LOW&gt; &lt;CLOSE&gt; &lt;TICKVOL&gt; &lt;VOL&gt; &lt;SPREAD&gt;），也支持 pandas 导出的 time, open, high, low, close, tick_volume, spread。价格按 bid 处理，点差按 points。文件只在你的浏览器里读取，不会上传。</p>
         <div class="row">
           <input type="file" id="fileInput" accept=".csv,.txt,text/csv" hidden>
-          <button class="btn primary" id="btnHosted" title="USDJPY_M1_last_year.csv，2025-11-11 至 2026-11-10，约 25 MB">载入 USDJPY 一年 M1 数据</button>
-          <button class="btn" id="btnPick">选择自己的文件</button>
-          <button class="btn" id="btnDemo">用模拟数据试用</button>
-          <span class="muted note">也可以把文件拖到这里</span>
+          <button class="btn primary" id="btnHosted" title="USDJPY_M1_last_year.csv，2025-11-11 至 2026-11-10，约 25 MB" data-i18n="hostedBtn" data-i18n-title="hostedTip">载入 USDJPY 一年 M1 数据</button>
+          <button class="btn" id="btnPick" data-i18n="pickFile">选择自己的文件</button>
+          <button class="btn" id="btnDemo" data-i18n="demo">用模拟数据试用</button>
+          <span class="muted note" data-i18n="dropHint">也可以把文件拖到这里</span>
         </div>
-        <label class="keep"><input type="checkbox" id="keepData" checked>读取后保存到这个浏览器，下次不用再选文件</label>
+        <label class="keep"><input type="checkbox" id="keepData" checked><span data-i18n="keepData">读取后保存到这个浏览器，下次不用再选文件</span></label>
         <div class="load-status" id="loadStatus" hidden></div>
         <div class="loadbar" id="loadBar" hidden><i></i></div>
       </div>
-      <p class="note">模拟数据是随机游走，只用来熟悉操作，统计结果没有意义。抽题方式、滑点和时段过滤在右上角的“设置”里调整。</p>
+      <p class="note" data-i18n="setupNote">模拟数据是随机游走，只用来熟悉操作，统计结果没有意义。抽题方式、滑点和时段过滤在右上角的“设置”里调整。</p>
     </div>
   </main>
 
   <!-- ===== quiz ===== -->
   <main class="quiz" id="quizView" hidden>
     <div class="workbench">
-      <nav class="tools" aria-label="绘图工具">
-        <button class="tool" data-tool="select" aria-pressed="true" title="选择与平移（V）" aria-label="选择与平移">
+      <nav class="tools" aria-label="绘图工具" data-i18n-aria="toolsAria">
+        <button class="tool" data-tool="select" aria-pressed="true" title="选择与平移（V）" aria-label="选择与平移" data-i18n-title="toolSelectTip" data-i18n-aria="toolSelect">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 3l10 6-4.5 1.2L8.5 15z"/></svg>
         </button>
-        <button class="tool" data-tool="trend" aria-pressed="false" title="趋势线（T）" aria-label="趋势线">
+        <button class="tool" data-tool="trend" aria-pressed="false" title="趋势线（T）" aria-label="趋势线" data-i18n-title="toolTrendTip" data-i18n-aria="toolTrend">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 15L16 5"/><circle cx="4" cy="15" r="1.8" fill="currentColor"/><circle cx="16" cy="5" r="1.8" fill="currentColor"/></svg>
         </button>
-        <button class="tool" data-tool="hline" aria-pressed="false" title="水平线（H）" aria-label="水平线">
+        <button class="tool" data-tool="hline" aria-pressed="false" title="水平线（H）" aria-label="水平线" data-i18n-title="toolHlineTip" data-i18n-aria="toolHline">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10h16"/></svg>
         </button>
-        <button class="tool" data-tool="fib" aria-pressed="false" title="斐波那契回撤（F）" aria-label="斐波那契回撤">
+        <button class="tool" data-tool="fib" aria-pressed="false" title="斐波那契回撤（F）" aria-label="斐波那契回撤" data-i18n-title="toolFibTip" data-i18n-aria="toolFib">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 4h14M3 8h14M3 11h14M3 13.5h14M3 16h14"/><path d="M4 16L16 4" stroke-dasharray="2 2"/></svg>
         </button>
         <hr>
-        <button class="tool" id="btnDelDrawing" title="删除选中的图形（Delete）" aria-label="删除选中的图形">
+        <button class="tool" id="btnDelDrawing" title="删除选中的图形（Delete）" aria-label="删除选中的图形" data-i18n-title="toolDelTip" data-i18n-aria="toolDel">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
         </button>
-        <button class="tool" id="btnClearDrawings" title="清除本题所有图形" aria-label="清除本题所有图形">
+        <button class="tool" id="btnClearDrawings" title="清除本题所有图形" aria-label="清除本题所有图形" data-i18n-title="toolClear" data-i18n-aria="toolClear">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
         </button>
       </nav>
       <section class="stage">
         <div class="chart-wrap">
-          <canvas id="chart" role="img" aria-label="当前题目的 K 线图，决策时刻之后的走势被遮住"></canvas>
+          <canvas id="chart" role="img" aria-label="当前题目的 K 线图，决策时刻之后的走势被遮住" data-i18n-aria="chartAria"></canvas>
         </div>
         <div class="strip">
-          <span><span class="label">周期</span>
+          <span><span class="label" data-i18n="tf">周期</span>
             <span class="seg" id="tfSeg">
               <button data-tf="1" aria-pressed="true">M1</button><button data-tf="5" aria-pressed="false">M5</button><button data-tf="15" aria-pressed="false">M15</button>
             </span>
           </span>
-          <span><span class="label">指标</span>
-            <span class="chips" id="indChips">
-              <button class="chip" data-ind="ema20">EMA 20</button>
-              <button class="chip" data-ind="ema50">EMA 50</button>
-              <button class="chip" data-ind="bb">布林带 20, 2</button>
-              <button class="chip" data-ind="vol">成交量</button>
-              <button class="chip" data-ind="rsi">RSI 14</button>
-              <button class="chip" data-ind="macd">MACD 12, 26, 9</button>
-              <button class="chip" data-ind="stops">止盈止损线</button>
-            </span>
+          <span><span class="label" data-i18n="indicators">指标</span>
+            <span class="chips" id="indChips"></span>
+            <button class="chip" id="btnIndParams" type="button" data-i18n="indParams" data-i18n-title="indParamsTip">参数…</button>
           </span>
-          <span><span class="label">缩放</span>
-            <span class="seg"><button id="zoomOut" aria-label="缩小">−</button><button id="zoomIn" aria-label="放大">+</button></span>
+          <span><span class="label" data-i18n="zoom">缩放</span>
+            <span class="seg"><button id="zoomOut" aria-label="缩小" data-i18n-aria="zoomOut">−</button><button id="zoomIn" aria-label="放大" data-i18n-aria="zoomIn">+</button></span>
           </span>
-          <span><button class="chip" id="magnet" aria-pressed="true" title="画线时吸附到最近的开高低收">吸附</button></span>
+          <span><button class="chip" id="magnet" aria-pressed="true" title="画线时吸附到最近的开高低收" data-i18n="magnet" data-i18n-title="magnetTip">吸附</button></span>
         </div>
         <div class="decide" id="decideBar">
           <div class="keys" id="keys">
-            <button class="key short" data-dir="-1">做空<kbd>S</kbd></button>
-            <button class="key skip" data-dir="0">不做<kbd>N</kbd></button>
-            <button class="key long" data-dir="1">做多<kbd>L</kbd></button>
+            <button class="key short" data-dir="-1"><span data-i18n="short">做空</span><kbd>S</kbd></button>
+            <button class="key skip" data-dir="0"><span data-i18n="skip">不做</span><kbd>N</kbd></button>
+            <button class="key long" data-dir="1"><span data-i18n="long">做多</span><kbd>L</kbd></button>
           </div>
           <div class="conf">
-            <span>把握</span>
+            <span data-i18n="conf">把握</span>
             <span class="seg" id="confSeg">
               <button data-conf="1" aria-pressed="false">1</button><button data-conf="2" aria-pressed="true">2</button><button data-conf="3" aria-pressed="false">3</button>
             </span>
           </div>
-          <input class="note-input" id="noteInput" type="text" placeholder="备注（可选，按 / 聚焦）" aria-label="备注">
-          <button class="btn" id="btnUndoLabel" title="删除最近一条记录">删除上一条</button>
+          <input class="note-input" id="noteInput" type="text" placeholder="备注（可选，按 / 聚焦）" aria-label="备注" data-i18n-ph="notePh" data-i18n-aria="noteAria">
+          <button class="btn" id="btnUndoLabel" title="删除最近一条记录" data-i18n="undoLabel" data-i18n-title="undoLabelTip">删除上一条</button>
         </div>
         <div class="decide" id="resultBar" hidden>
           <div class="result" id="resultBox"></div>
-          <button class="btn primary" id="btnNext">下一题<span class="kb">（Enter）</span></button>
+          <button class="btn primary" id="btnNext"><span data-i18n="next">下一题</span><span class="kb" data-i18n="nextKb">（Enter）</span></button>
         </div>
       </section>
     </div>
@@ -429,36 +448,61 @@ dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
 <!-- settings dialog -->
 <dialog id="settingsDlg" aria-labelledby="settingsTitle">
   <form class="dlg" method="dialog" id="settingsForm">
-    <h2 id="settingsTitle">设置</h2>
-    <div class="field"><label for="sMode">抽题方式</label>
-      <select id="sMode"><option value="random">随机时刻</option><option value="spike">只抽急涨急跌</option></select></div>
-    <div class="field"><label for="sW">急涨急跌窗口（分钟）</label><input id="sW" type="number" min="3" max="120" step="1"></div>
-    <div class="field"><label for="sK">急涨急跌阈值（倍标准差）</label><input id="sK" type="number" min="1" max="10" step="0.5">
-      <div class="hint">窗口内的价格变动超过过去 24 小时同长度变动标准差的这个倍数，才算一次急涨或急跌。</div></div>
-    <div class="field"><label for="sHours">只抽这些服务器小时</label><input id="sHours" type="text" placeholder="留空表示全部，例如 2-4, 10-12">
-      <div class="hint">按 K 线的服务器时间计算，0–23。</div></div>
-    <div class="field"><label for="sSlip">每边滑点（pip）</label><input id="sSlip" type="number" min="0" max="5" step="0.05"></div>
-    <div class="field"><label for="sStopMode">止盈止损方式</label>
-      <select id="sStopMode"><option value="atr">按 ATR 倍数</option><option value="pips">固定 pip</option></select></div>
-    <div class="field"><label for="sAtrTf">ATR 所用周期</label>
-      <select id="sAtrTf"><option value="1">M1</option><option value="5">M5</option><option value="15">M15</option></select>
-      <div class="hint">ATR 14，用决策时刻已经收盘的 K 线计算。</div></div>
-    <div class="field"><label for="sTpMult">止盈 = ATR ×</label><input id="sTpMult" type="number" min="0.1" max="20" step="0.1"></div>
-    <div class="field"><label for="sSlMult">止损 = ATR ×</label><input id="sSlMult" type="number" min="0.1" max="20" step="0.1"></div>
-    <div class="field"><label for="sTp">固定止盈（pip）</label><input id="sTp" type="number" min="1" max="200" step="0.5"></div>
-    <div class="field"><label for="sSl">固定止损（pip）</label><input id="sSl" type="number" min="1" max="200" step="0.5">
-      <div class="hint">从入场成交价算起，最长持有 60 分钟。先定好再看结果，不要根据结果反复调整。</div></div>
-    <div class="field"><label for="sPip">1 pip 的价格</label><input id="sPip" type="text" placeholder="自动"></div>
-    <div class="field"><label for="sPoint">1 point 的价格</label><input id="sPoint" type="text" placeholder="自动">
-      <div class="hint">点差列的单位。USDJPY 通常是 0.001，GBPUSD 通常是 0.00001。</div></div>
-    <div class="field"><label for="sVisible">默认显示 K 线数</label><input id="sVisible" type="number" min="30" max="800" step="10"></div>
-    <div class="field"><label for="sShowTime">显示时刻</label>
-      <select id="sShowTime"><option value="1">显示服务器时刻（不含日期）</option><option value="0">只显示相对决策时刻的分钟数</option></select></div>
-    <div class="field"><label for="sReveal">答题后</label>
-      <select id="sReveal"><option value="1">揭晓后续走势和结果</option><option value="0">直接进入下一题</option></select></div>
+    <h2 id="settingsTitle" data-i18n="settingsTitle">设置</h2>
+    <div class="field"><label for="sLang" data-i18n="sLang">界面语言</label>
+      <select id="sLang"><option value="auto" data-i18n="langAuto">跟随系统</option><option value="zh" lang="zh-CN">中文</option><option value="en" lang="en">English</option></select></div>
+    <div class="field"><label for="sMode" data-i18n="sMode">抽题方式</label>
+      <select id="sMode"><option value="random" data-i18n="modeRandom">随机时刻</option><option value="spike" data-i18n="modeSpike">只抽急涨急跌</option></select></div>
+    <div class="field"><label for="sW" data-i18n="sW">急涨急跌窗口（分钟）</label><input id="sW" type="number" min="3" max="120" step="1"></div>
+    <div class="field"><label for="sK" data-i18n="sK">急涨急跌阈值（倍标准差）</label><input id="sK" type="number" min="1" max="10" step="0.5">
+      <div class="hint" data-i18n="sKHint">窗口内的价格变动超过过去 24 小时同长度变动标准差的这个倍数，才算一次急涨或急跌。</div></div>
+    <div class="field"><label for="sHours" data-i18n="sHours">只抽这些服务器小时</label><input id="sHours" type="text" placeholder="留空表示全部，例如 2-4, 10-12" data-i18n-ph="sHoursPh">
+      <div class="hint" data-i18n="sHoursHint">按 K 线的服务器时间计算，0–23。</div></div>
+    <div class="field"><label for="sSlip" data-i18n="sSlip">每边滑点（pip）</label><input id="sSlip" type="number" min="0" max="5" step="0.05"></div>
+    <div class="field"><label for="sStopMode" data-i18n="sStopMode">止盈止损方式</label>
+      <select id="sStopMode"><option value="atr" data-i18n="stopAtr">按 ATR 倍数</option><option value="pips" data-i18n="stopPips">固定 pip</option></select></div>
+    <div class="field"><label for="sAtrTf" data-i18n="sAtrTf">ATR 的 K 线周期</label>
+      <select id="sAtrTf"><option value="1">M1</option><option value="5">M5</option><option value="15">M15</option></select></div>
+    <div class="field"><label for="sAtrP" data-i18n="sAtrP">ATR 长度（根）</label><input id="sAtrP" type="number" min="2" max="200" step="1">
+      <div class="hint" data-i18n="sAtrHint">用决策时刻已经收盘的 K 线计算。</div></div>
+    <div class="field"><label for="sTpMult" data-i18n="sTpMult">止盈 = ATR ×</label><input id="sTpMult" type="number" min="0.1" max="20" step="0.1"></div>
+    <div class="field"><label for="sSlMult" data-i18n="sSlMult">止损 = ATR ×</label><input id="sSlMult" type="number" min="0.1" max="20" step="0.1"></div>
+    <div class="field"><label for="sTp" data-i18n="sTp">固定止盈（pip）</label><input id="sTp" type="number" min="1" max="200" step="0.5"></div>
+    <div class="field"><label for="sSl" data-i18n="sSl">固定止损（pip）</label><input id="sSl" type="number" min="1" max="200" step="0.5">
+      <div class="hint" data-i18n="sSlHint">从入场成交价算起，一直持有到止盈或止损被触发，没有时间上限。先定好再看结果，不要根据结果反复调整。</div></div>
+    <div class="field"><label for="sPip" data-i18n="sPip">1 pip 的价格</label><input id="sPip" type="text" placeholder="自动" data-i18n-ph="auto"></div>
+    <div class="field"><label for="sPoint" data-i18n="sPoint">1 point 的价格</label><input id="sPoint" type="text" placeholder="自动" data-i18n-ph="auto">
+      <div class="hint" data-i18n="sPointHint">点差列的单位。USDJPY 通常是 0.001，GBPUSD 通常是 0.00001。</div></div>
+    <div class="field"><label for="sVisible" data-i18n="sVisible">默认显示 K 线数</label><input id="sVisible" type="number" min="30" max="800" step="10"></div>
+    <div class="field"><label for="sShowTime" data-i18n="sShowTime">显示时刻</label>
+      <select id="sShowTime"><option value="1" data-i18n="showTimeOn">显示服务器时刻（不含日期）</option><option value="0" data-i18n="showTimeOff">只显示相对决策时刻的分钟数</option></select></div>
+    <div class="field"><label for="sReveal" data-i18n="sReveal">答题后</label>
+      <select id="sReveal"><option value="1" data-i18n="revealOn">揭晓后续走势和结果</option><option value="0" data-i18n="revealOff">直接进入下一题</option></select></div>
     <div class="actions">
-      <button class="btn" value="cancel" formnovalidate>取消</button>
-      <button class="btn primary" value="ok" id="settingsOk">保存</button>
+      <button class="btn primary" value="ok" id="settingsOk" data-i18n="save">保存</button>
+      <button class="btn" value="cancel" formnovalidate data-i18n="cancel">取消</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- indicator parameters dialog -->
+<dialog id="indDlg" aria-labelledby="indTitle">
+  <form class="dlg" method="dialog" id="indForm">
+    <h2 id="indTitle" data-i18n="indTitle">指标参数</h2>
+    <div class="field top"><label data-i18n="emaLines">EMA 线</label>
+      <div><div class="ema-list" id="emaList"></div>
+        <button type="button" class="btn" id="btnAddEma" data-i18n="addEma">添加一条 EMA</button></div></div>
+    <div class="field"><label for="iBbP" data-i18n="bbPeriod">布林带周期</label><input id="iBbP" type="number" min="2" max="500" step="1"></div>
+    <div class="field"><label for="iBbK" data-i18n="bbMult">布林带倍数（标准差）</label><input id="iBbK" type="number" min="0.1" max="10" step="0.1"></div>
+    <div class="field"><label for="iRsiP" data-i18n="rsiPeriod">RSI 周期</label><input id="iRsiP" type="number" min="2" max="500" step="1"></div>
+    <div class="field"><label for="iMacdF" data-i18n="macdFast">MACD 快线</label><input id="iMacdF" type="number" min="1" max="500" step="1"></div>
+    <div class="field"><label for="iMacdS" data-i18n="macdSlow">MACD 慢线</label><input id="iMacdS" type="number" min="2" max="500" step="1"></div>
+    <div class="field"><label for="iMacdSig" data-i18n="macdSignal">MACD 信号线</label><input id="iMacdSig" type="number" min="1" max="500" step="1"></div>
+    <p class="note" data-i18n="indHint">这些参数只影响图表显示，不影响统计。</p>
+    <div class="actions">
+      <button class="btn primary" value="ok" data-i18n="save">保存</button>
+      <button type="button" class="btn left" id="btnIndReset" data-i18n="resetDefaults">恢复默认</button>
+      <button class="btn" value="cancel" formnovalidate data-i18n="cancel">取消</button>
     </div>
   </form>
 </dialog>
@@ -466,10 +510,10 @@ dialog::backdrop { background: rgba(10, 16, 22, 0.45); }
 <!-- export fallback dialog -->
 <dialog id="exportDlg" aria-labelledby="exportTitle">
   <form class="dlg" method="dialog">
-    <h2 id="exportTitle">复制标注数据</h2>
-    <p class="muted" style="margin:0 0 10px;font-size:13px">这里无法直接下载文件。全选下面的内容，复制后保存为 .csv 文件即可。</p>
+    <h2 id="exportTitle" data-i18n="exportTitle">复制标注数据</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px" data-i18n="exportText">这里无法直接下载文件。全选下面的内容，复制后保存为 .csv 文件即可。</p>
     <textarea id="exportText" readonly></textarea>
-    <div class="actions"><button class="btn primary" value="ok">关闭</button></div>
+    <div class="actions"><button class="btn primary" value="ok" data-i18n="close">关闭</button></div>
   </form>
 </dialog>
 
@@ -591,7 +635,7 @@ window.BlindCore = (() => {
         if (f0.some((x) => /^["<_A-Za-z]/.test(x.trim()))) {
           m = mapHeader(f0);
           if (m.open == null || m.high == null || m.low == null || m.close == null || (m.datetime == null && (m.date == null || m.time == null))) {
-            throw new Error('表头里找不到时间或开高低收列，请确认是 M1 K 线数据。');
+            throw Object.assign(new Error('missing time or OHLC columns'), { code: 'header' });
           }
           return;
         }
@@ -635,7 +679,7 @@ window.BlindCore = (() => {
     if (dec) carry += dec.decode();
     carry.split('\n').forEach(handle);
     if (onProgress) onProgress(1);
-    if (!m) throw new Error('文件是空的。');
+    if (!m) throw Object.assign(new Error('empty file'), { code: 'empty' });
     const D = {
       time: cols.time.done(), open: cols.open.done(), high: cols.high.done(), low: cols.low.done(),
       close: cols.close.done(), vol: cols.vol.done(), spread: cols.spread.done()
@@ -751,19 +795,24 @@ window.BlindCore = (() => {
   }
 
   function barrier(D, t, dir, tp, sl, pip, point, slip) {
-    // tp / sl in pips from the entry fill; longs close at bid, shorts at ask; same bar touching both counts as stop
-    const e = t + 1, end = Math.min(D.n - 1, t + 1 + HMAX);
+    // tp / sl in pips from the entry fill; longs close at bid, shorts at ask; same bar touching both counts as stop.
+    // There is no time limit: the trade runs until one side is hit, or closes at the last bar if the data ends first.
+    // mfe / mae always cover the first HMAX minutes, so they do not depend on where the stops are.
+    const e = t + 1, last = D.n - 1, winEnd = Math.min(last, t + 1 + HMAX);
     const sp = (j) => D.spread[j] * point;
     const entry = dir === 1 ? D.open[e] + sp(e) + slip * pip : D.open[e] - slip * pip;
     const tpPx = entry + dir * tp * pip, slPx = entry - dir * sl * pip;
     let mfe = 0, mae = 0, exitPx = NaN, how = '', exitJ = -1;
-    for (let j = e; j < end; j++) {
+    for (let j = e; j <= last; j++) {
+      if (how && j >= winEnd) break;
       const adj = dir === 1 ? 0 : sp(j);
       const o = D.open[j] + adj, hi = D.high[j] + adj, lo = D.low[j] + adj;
-      const fav = dir === 1 ? hi - entry : entry - lo;
-      const adv = dir === 1 ? entry - lo : hi - entry;
-      if (fav > mfe) mfe = fav;
-      if (adv > mae) mae = adv;
+      if (j < winEnd) {
+        const fav = dir === 1 ? hi - entry : entry - lo;
+        const adv = dir === 1 ? entry - lo : hi - entry;
+        if (fav > mfe) mfe = fav;
+        if (adv > mae) mae = adv;
+      }
       if (how) continue;
       if (dir === 1) {
         if (o <= slPx) { exitPx = o - slip * pip; how = 'sl'; }
@@ -778,9 +827,10 @@ window.BlindCore = (() => {
       }
       if (how) exitJ = j;
     }
-    if (!how) { exitPx = D.open[end] + (dir === 1 ? 0 : sp(end)) - dir * slip * pip; how = 'time'; exitJ = end; }
+    if (!how) { exitJ = last; exitPx = D.close[last] + (dir === 1 ? 0 : sp(last)) - dir * slip * pip; how = 'end'; }
     const pips = dir * (exitPx - entry) / pip;
-    return { how, pips, r: pips / sl, mfe: mfe / pip, mae: mae / pip, entry, exitPx, exitJ };
+    const mins = (D.time[exitJ] - D.time[e]) / 60 + 1;
+    return { how, pips, r: pips / sl, mfe: mfe / pip, mae: mae / pip, entry, exitPx, exitJ, mins };
   }
 
   function atrAt(D, t, tf, p) {
@@ -803,7 +853,8 @@ window.BlindCore = (() => {
     let s2 = 0;
     for (let i = 0; i < n; i++) s2 += (a[i] - mean) * (a[i] - mean);
     const sd = n > 1 ? Math.sqrt(s2 / (n - 1)) : NaN;
-    const t = n > 1 && sd > 0 ? mean / (sd / Math.sqrt(n)) : NaN;
+    // identical values (e.g. every trade hit the same take-profit) leave only rounding noise in sd; no t-value then
+    const t = n > 1 && sd > 1e-9 ? mean / (sd / Math.sqrt(n)) : NaN;
     let w = 0;
     for (let i = 0; i < n; i++) if (a[i] > 0) w++;
     let lo = NaN, hi = NaN;
@@ -896,14 +947,15 @@ window.BlindCore = (() => {
     }
     return sma(tr, p);
   }
-  function indicators(B) {
+  // P: { emas: [periods], bbP, bbK, rsiP, macdF, macdS, macdSig, atrP }
+  function indicators(B, P) {
     const c = B.close;
-    const e12 = ema(c, 12), e26 = ema(c, 26);
+    const ef = ema(c, P.macdF), es = ema(c, P.macdS);
     const macd = new Float64Array(B.n);
-    for (let i = 0; i < B.n; i++) macd[i] = e12[i] - e26[i];
+    for (let i = 0; i < B.n; i++) macd[i] = ef[i] - es[i];
     return {
-      ema20: ema(c, 20), ema50: ema(c, 50), bb: bollinger(c, 20, 2), rsi: rsi(c, 14),
-      macd, macdSig: sma(macd, 9), atr: atr(B, 14)
+      emas: P.emas.map((p) => ema(c, p)), bb: bollinger(c, P.bbP, P.bbK), rsi: rsi(c, P.rsiP),
+      macd, macdSig: sma(macd, P.macdSig), atr: atr(B, P.atrP)
     };
   }
 
@@ -961,6 +1013,7 @@ window.BlindCore = (() => {
   const $$ = (s) => Array.from(document.querySelectorAll(s));
   const HS = C.HS, HMAX = C.HMAX;
   const LOADBARS = 1800;
+  const REVEAL_MAX = 20160; // reveal at most two weeks of M1 after the decision
   const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618];
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -970,14 +1023,14 @@ window.BlindCore = (() => {
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
   };
-  const DEFAULTS = { mode: 'random', W: 15, k: 3, hours: '', slip: 0.5, stopMode: 'atr', atrTf: 1, tpMult: 2, slMult: 1.5, tp: 10, sl: 10, pip: '', point: '', visible: 150, showTime: true, reveal: true };
+  const DEFAULTS = { mode: 'random', W: 15, k: 3, hours: '', slip: 0.5, stopMode: 'atr', atrTf: 1, atrP: 14, tpMult: 2, slMult: 1.5, tp: 10, sl: 10, pip: '', point: '', visible: 150, showTime: true, reveal: true, lang: 'auto' };
   const S = Object.assign({}, DEFAULTS, store.get('blindlab:settings') || {});
 
   const state = {
     D: null, meta: null, name: '', fp: '',
     labels: [],
     q: null, phase: 'idle', conf: 2, tf: 1,
-    ind: Object.assign({ ema20: true, ema50: true, bb: false, vol: true, rsi: false, macd: false, stops: true }, store.get('blindlab:ind') || {}),
+    ind: Object.assign({ bb: false, vol: true, rsi: false, macd: false, stops: true }, store.get('blindlab:ind') || {}),
     previewDir: null, revealRec: null, touch: false, pinch: null,
     tool: 'select', magnet: true,
     drawings: [], selected: -1, draft: null, drag: null,
@@ -987,6 +1040,220 @@ window.BlindCore = (() => {
     baseCache: new Map(), horizon: 30,
     downloads: null
   };
+
+  /* ---------- indicator parameters ---------- */
+  const IND_DEFAULTS = { emas: [{ p: 20, on: true }, { p: 50, on: true }], bbP: 20, bbK: 2, rsiP: 14, macdF: 12, macdS: 26, macdSig: 9 };
+  // one look per EMA slot: colour token, line width, dash
+  const EMA_STYLES = [
+    { c: 'accent', w: 1.4, dash: [] }, { c: 'ink', w: 1.2, dash: [6, 3] }, { c: 'ema3', w: 1.3, dash: [] }, { c: 'ema4', w: 1.3, dash: [] },
+    { c: 'accent', w: 1.2, dash: [2, 3] }, { c: 'ema3', w: 1.2, dash: [6, 3] }, { c: 'ema4', w: 1.2, dash: [6, 3] }, { c: 'ink2', w: 1.2, dash: [] }
+  ];
+  const EMA_MAX = EMA_STYLES.length;
+  const IP = (() => {
+    const o = JSON.parse(JSON.stringify(IND_DEFAULTS));
+    const saved = store.get('blindlab:indp');
+    if (saved && typeof saved === 'object') Object.assign(o, saved);
+    else {
+      // older versions kept EMA 20 and EMA 50 as plain on/off switches
+      const old = store.get('blindlab:ind') || {};
+      if (old.ema20 === false) o.emas[0].on = false;
+      if (old.ema50 === false) o.emas[1].on = false;
+    }
+    o.emas = (Array.isArray(o.emas) ? o.emas : []).filter((e) => e && +e.p >= 1).slice(0, EMA_MAX).map((e) => ({ p: Math.round(+e.p), on: e.on !== false }));
+    return o;
+  })();
+  const saveIP = () => store.set('blindlab:indp', IP);
+  const atrPeriod = () => Math.max(2, Math.min(200, Math.round(+S.atrP) || 14));
+  const indParams = () => ({ emas: IP.emas.map((e) => e.p), bbP: IP.bbP, bbK: IP.bbK, rsiP: IP.rsiP, macdF: IP.macdF, macdS: IP.macdS, macdSig: IP.macdSig, atrP: atrPeriod() });
+  function indSummary() {
+    const parts = IP.emas.filter((e) => e.on).map((e) => 'ema' + e.p);
+    if (state.ind.bb) parts.push('bb' + IP.bbP + '/' + IP.bbK);
+    if (state.ind.vol) parts.push('vol');
+    if (state.ind.rsi) parts.push('rsi' + IP.rsiP);
+    if (state.ind.macd) parts.push('macd' + IP.macdF + '/' + IP.macdS + '/' + IP.macdSig);
+    if (state.ind.stops) parts.push('stops');
+    return parts.join(' ');
+  }
+
+  /* ---------- language ---------- */
+  const STR = {
+    zh: {
+      brand: '盘感盲测台', backToQuiz: '返回答题', stats: '统计', settings: '设置', changeData: '换数据',
+      langSwitch: 'English', langSwitchAria: '切换到英文界面',
+      setupTitle: '先验证盘感，再谈规则',
+      setupP1: '从历史 M1 数据里随机抽一个时刻，只给你看到这一刻为止的走势，日期隐藏。你判断做多、做空或不做，系统记下来；攒够几百题后，统计你的判断扣掉成本后还剩多少。',
+      setupP2: '每题的入场价是决策那根 K 线之后下一根的开盘中间价，结果按 15、30、60 分钟后的中间价计算，成本 = 入场和出场点差的一半之和 + 两边滑点。另外按止盈止损算一次：一直持有到其中一边被触发，没有时间上限。',
+      savedTitle: '保存在这个浏览器里的数据', dropTitle: '选择 M1 数据',
+      formats: '支持 MT5 导出的 CSV（<DATE> <TIME> <OPEN> <HIGH> <LOW> <CLOSE> <TICKVOL> <VOL> <SPREAD>），也支持 pandas 导出的 time, open, high, low, close, tick_volume, spread。价格按 bid 处理，点差按 points。文件只在你的浏览器里读取，不会上传。',
+      hostedBtn: '载入 USDJPY 一年 M1 数据', hostedTip: 'USDJPY_M1_last_year.csv，2025-11-11 至 2026-11-10，约 25 MB',
+      pickFile: '选择自己的文件', demo: '用模拟数据试用', dropHint: '也可以把文件拖到这里',
+      keepData: '读取后保存到这个浏览器，下次不用再选文件',
+      setupNote: '模拟数据是随机游走，只用来熟悉操作，统计结果没有意义。抽题方式、滑点和时段过滤在右上角的“设置”里调整。',
+      toolsAria: '绘图工具', toolSelect: '选择与平移', toolSelectTip: '选择与平移（V）', toolTrend: '趋势线', toolTrendTip: '趋势线（T）',
+      toolHline: '水平线', toolHlineTip: '水平线（H）', toolFib: '斐波那契回撤', toolFibTip: '斐波那契回撤（F）',
+      toolDel: '删除选中的图形', toolDelTip: '删除选中的图形（Delete）', toolClear: '清除本题所有图形',
+      chartAria: '当前题目的 K 线图，决策时刻之后的走势被遮住',
+      tf: '周期', indicators: '指标', indParams: '参数…', indParamsTip: '修改指标参数，添加或删除 EMA',
+      zoom: '缩放', zoomOut: '缩小', zoomIn: '放大', magnet: '吸附', magnetTip: '画线时吸附到最近的开高低收',
+      short: '做空', skip: '不做', long: '做多', conf: '把握', notePh: '备注（可选，按 / 聚焦）', noteAria: '备注',
+      undoLabel: '删除上一条', undoLabelTip: '删除最近一条记录', next: '下一题', nextKb: '（Enter）',
+      emaChip: 'EMA {p}', bbChip: '布林带 {p}, {k}', volChip: '成交量', rsiChip: 'RSI {p}', macdChip: 'MACD {f}, {s}, {g}', stopsChip: '止盈止损线',
+      settingsTitle: '设置', sLang: '界面语言', langAuto: '跟随系统', sMode: '抽题方式', modeRandom: '随机时刻', modeSpike: '只抽急涨急跌',
+      sW: '急涨急跌窗口（分钟）', sK: '急涨急跌阈值（倍标准差）',
+      sKHint: '窗口内的价格变动超过过去 24 小时同长度变动标准差的这个倍数，才算一次急涨或急跌。',
+      sHours: '只抽这些服务器小时', sHoursPh: '留空表示全部，例如 2-4, 10-12', sHoursHint: '按 K 线的服务器时间计算，0–23。',
+      sSlip: '每边滑点（pip）', sStopMode: '止盈止损方式', stopAtr: '按 ATR 倍数', stopPips: '固定 pip',
+      sAtrTf: 'ATR 的 K 线周期', sAtrP: 'ATR 长度（根）', sAtrHint: '用决策时刻已经收盘的 K 线计算。',
+      sTpMult: '止盈 = ATR ×', sSlMult: '止损 = ATR ×', sTp: '固定止盈（pip）', sSl: '固定止损（pip）',
+      sSlHint: '从入场成交价算起，一直持有到止盈或止损被触发，没有时间上限。先定好再看结果，不要根据结果反复调整。',
+      sPip: '1 pip 的价格', sPoint: '1 point 的价格', auto: '自动', autoVal: '自动（{v}）',
+      sPointHint: '点差列的单位。USDJPY 通常是 0.001，GBPUSD 通常是 0.00001。',
+      sVisible: '默认显示 K 线数', sShowTime: '显示时刻', showTimeOn: '显示服务器时刻（不含日期）', showTimeOff: '只显示相对决策时刻的分钟数',
+      sReveal: '答题后', revealOn: '揭晓后续走势和结果', revealOff: '直接进入下一题', cancel: '取消', save: '保存',
+      indTitle: '指标参数', emaLines: 'EMA 线', emaPeriodAria: 'EMA 周期', remove: '删除', addEma: '添加一条 EMA', noEma: '没有 EMA 线',
+      bbPeriod: '布林带周期', bbMult: '布林带倍数（标准差）', rsiPeriod: 'RSI 周期', macdFast: 'MACD 快线', macdSlow: 'MACD 慢线', macdSignal: 'MACD 信号线',
+      indHint: '这些参数只影响图表显示，不影响统计。', resetDefaults: '恢复默认',
+      exportTitle: '复制标注数据', exportText: '这里无法直接下载文件。全选下面的内容，复制后保存为 .csv 文件即可。', close: '关闭',
+      progress: '已答 <b>{n}</b> 题<span class="more">，做多 {l}，做空 {s}，不做 {k}</span>',
+      reading: '正在读取 {name} …', readFailed: '读取失败，请确认文件格式。',
+      errHeader: '表头里找不到时间或开高低收列，请确认是 M1 K 线数据。', errEmpty: '文件是空的。',
+      tooFew: '数据太少（{n} 根），至少需要几千根 M1。', notM1: '这份数据相邻 K 线的间隔是 {s} 秒，不是 M1。请导出 M1 数据。',
+      noSpread: '文件里没有点差列，成本只按滑点计算', skipped: '跳过了 {n} 行无法识别或时间重复的数据', restored: '已恢复之前的 {n} 条记录', noteSep: '；',
+      datasetDesc: '{name}，{n} 根 M1', demoName: '模拟数据',
+      storageFail: '浏览器存储不可用，刷新页面后记录会丢失，请及时导出。', savedOk: '数据已保存到这个浏览器，下次可以直接打开',
+      quotaFail: '浏览器的存储空间不够，这份数据没有保存。可以删掉旧数据，或只导出较短的时间段。', storeFail: '这个浏览器不允许保存数据，下次需要重新选择文件。',
+      readingSaved: '正在从浏览器读取数据 …', savedMissing: '没有找到这份数据，可能已被浏览器清理，请重新选择文件。', savedReadFail: '读取保存的数据失败，请重新选择文件。',
+      deletedData: '已删除这份数据，答题记录仍然保留', deleteFail: '删除失败，请稍后再试',
+      savedDesc: '{n} 根 M1，{from} 至 {to}，约 {mb} MB', savedAnswered: '，已答 {n} 题', continueLast: '继续上次', open: '打开', delete: '删除', confirmDelete: '再点一次删除',
+      storageNote: '数据和答题记录只存在这个浏览器里，清除浏览器数据时会一起删除。', storageUsage: '目前占用约 {mb} MB。',
+      downloading: '正在下载 {name} …', downloadFail: '无法从网站下载 {name}（{why}），可以改用“选择自己的文件”。', networkError: '网络错误',
+      crowded: '这份数据里不重叠的题目快用完了，换一份更长的数据再继续。', noMatch: '按当前设置找不到新题目，可以放宽时段或降低急涨急跌阈值。',
+      recorded: '已记录', youChose: '你选择了{dir}', spikeUp: '，这是一次急涨', spikeDown: '，这是一次急跌',
+      hAfter: '{h} 分钟后', midMove: '中间价', hMin: '{h} 分钟', afterCost: '扣成本', comma: '，', paren: '（{v}）',
+      stopsDesc: '止盈 {tp} / 止损 {sl} pip', hitTp: '先到止盈', hitSl: '先到止损', hitEnd: '到数据末尾都没碰到', heldFor: '持有 {d}',
+      durMin: '{n} 分钟', durHour: '{n} 小时', durDay: '{n} 天',
+      noRecords: '还没有记录', deletedRecord: '已删除第 {n} 条记录',
+      longTp: '做多止盈 {p}', longSl: '做多止损 {p}', shortTp: '做空止盈 {p}', shortSl: '做空止损 {p}',
+      exitTp: '止盈', exitSl: '止损', exitEnd: '数据结束',
+      noQuestion: '没有题目', hiddenAfter: '后面的走势已隐藏', afterDecision: '决策之后', minRel: '{m} 分', volPane: '成交量（tick）',
+      oShort: '开', hShort: '高', lShort: '低', cShort: '收', selectFirst: '先点选一个图形',
+      noExport: '还没有记录可以导出', savedFile: '已保存 {f}', saveOpen: '保存窗口已经打开，请先处理它',
+      statsTitle: '你的盘感统计',
+      statsIntro: '入场为决策后下一根 M1 的开盘中间价，持有 {h} 分钟。单位都是 pip。超额 = 你的方向收益减去同一抽题方式下随机时刻的平均漂移；净值 = 扣掉点差和每边 {slip} pip 滑点之后。',
+      exportCsv: '导出标注 CSV',
+      verdictFew: '方向题还不到 100 道（现在 {n} 道），下面的数字只能作参考。',
+      verdictNet: '扣除成本后的平均收益显著为正（t = {t}），值得把这些判断拆成可计算的特征。',
+      verdictExcess: '相对随机基准有方向判断力（超额 t = {t}），但扣除成本后还不够显著。',
+      verdictNone: '目前看不出你的判断优于同一批时刻的随机方向。',
+      yourCalls: '你的判断', thGroup: '分组', thN: '笔数', thGross: '毛收益', thExcess: '超额', thExcessT: '超额 t', thNet: '净收益', thNetT: '净 t', thNetWin: '净胜率', thNetCI: '净收益 95% 区间',
+      rangeSep: ' ～ ', rowAll: '全部方向题', rowConf: '把握 {c}',
+      byStops: '按止盈止损计算', stopTextPips: '止盈 {tp} pip、止损 {sl} pip',
+      stopTextAtr: '止盈 {tpm} × ATR、止损 {slm} × ATR（M{tf} 的 ATR {p}，这批题平均约为 {tp} pip 和 {sl} pip）',
+      stopsExplain: '{stop}，从入场成交价算起，一直持有到其中一边被触发，没有时间上限；同一根 K 线里两边都碰到时按止损算；R 已扣除点差和滑点。“随机方向 R”是同一时刻做多和做空的平均结果，超额 R 是你选的方向比它多出来的部分。最后两列与止盈止损的设定无关：60 分钟内的最大有利波动减去最大不利波动，同样与随机方向比较。',
+      thTpFirst: '先到止盈', thSlFirst: '先到止损', thHold: '平均持有', thAvgR: '平均 R', thRt: 'R 的 t', thRandR: '随机方向 R', thExR: '超额 R', thExRt: '超额 t', thMfeMae: '有利减不利（pip）', thT: 't',
+      rFew: '方向题不到 100 道，先看个大概：', rSummary: '{few}按止盈止损计算，你选的方向比随机方向平均{more} {v} R（t = {t}）。', more: '多', less: '少',
+      controls: '对照', controlsText: '随机方向在同一批时刻的期望毛收益为 0，扣成本后约为 {c} pip。急涨急跌题还会给出两条机械规则：每次都反向，和每次都顺势。你的判断至少要好过这两条，才说明“挑选”本身有价值。',
+      thRule: '规则', fadeRule: '急涨急跌后每次都反向', followRule: '急涨急跌后每次都顺势',
+      skipsLine: '不做的题：{n} 道。随机基准每种抽题方式各取 3,000 个时刻估算。'
+    },
+    en: {
+      brand: 'Market Sense Blind Test', backToQuiz: 'Back to quiz', stats: 'Stats', settings: 'Settings', changeData: 'Change data',
+      langSwitch: '中文', langSwitchAria: 'Switch to Chinese',
+      setupTitle: 'Test your market sense before you write rules',
+      setupP1: 'A random moment is drawn from historical M1 data and you only see the chart up to that moment, with the date hidden. You call long, short or no trade, and the call is recorded. After a few hundred questions, the stats show what your calls are worth after costs.',
+      setupP2: 'Entry is the mid price at the open of the bar after the decision bar. Results are measured at the mid price 15, 30 and 60 minutes later; cost is half the spread at entry plus half at exit, plus slippage on both sides. Each trade is also scored with a take-profit and a stop-loss and held until one of them is hit, with no time limit.',
+      savedTitle: 'Data saved in this browser', dropTitle: 'Choose M1 data',
+      formats: 'Accepts CSV exported from MT5 (<DATE> <TIME> <OPEN> <HIGH> <LOW> <CLOSE> <TICKVOL> <VOL> <SPREAD>) or from pandas (time, open, high, low, close, tick_volume, spread). Prices are treated as bid and the spread is in points. Files are read in your browser and never uploaded.',
+      hostedBtn: 'Load one year of USDJPY M1', hostedTip: 'USDJPY_M1_last_year.csv, 2025-11-11 to 2026-11-10, about 25 MB',
+      pickFile: 'Choose your own file', demo: 'Try with simulated data', dropHint: 'or drop a file here',
+      keepData: 'Keep the data in this browser so you don’t have to load it again',
+      setupNote: 'Simulated data is a random walk: good for learning the controls, meaningless for stats. Sampling, slippage and hour filters are under Settings at the top right.',
+      toolsAria: 'Drawing tools', toolSelect: 'Select and pan', toolSelectTip: 'Select and pan (V)', toolTrend: 'Trend line', toolTrendTip: 'Trend line (T)',
+      toolHline: 'Horizontal line', toolHlineTip: 'Horizontal line (H)', toolFib: 'Fibonacci retracement', toolFibTip: 'Fibonacci retracement (F)',
+      toolDel: 'Delete selected drawing', toolDelTip: 'Delete selected drawing (Delete)', toolClear: 'Clear all drawings',
+      chartAria: 'Candlestick chart for the current question; price action after the decision is hidden',
+      tf: 'Timeframe', indicators: 'Indicators', indParams: 'Parameters…', indParamsTip: 'Edit indicator parameters, add or remove EMAs',
+      zoom: 'Zoom', zoomOut: 'Zoom out', zoomIn: 'Zoom in', magnet: 'Snap', magnetTip: 'Snap drawing points to the nearest open, high, low or close',
+      short: 'Short', skip: 'No trade', long: 'Long', conf: 'Confidence', notePh: 'Note (optional, press / to focus)', noteAria: 'Note',
+      undoLabel: 'Delete last', undoLabelTip: 'Delete the most recent record', next: 'Next', nextKb: ' (Enter)',
+      emaChip: 'EMA {p}', bbChip: 'Bollinger {p}, {k}', volChip: 'Volume', rsiChip: 'RSI {p}', macdChip: 'MACD {f}, {s}, {g}', stopsChip: 'TP / SL lines',
+      settingsTitle: 'Settings', sLang: 'Language', langAuto: 'Follow system', sMode: 'Sampling', modeRandom: 'Random moments', modeSpike: 'Spikes only',
+      sW: 'Spike window (minutes)', sK: 'Spike threshold (std devs)',
+      sKHint: 'A move over the window counts as a spike when it exceeds this many standard deviations of same-length moves over the past 24 hours.',
+      sHours: 'Only these server hours', sHoursPh: 'Empty for all, e.g. 2-4, 10-12', sHoursHint: 'Uses the bars’ server time, 0–23.',
+      sSlip: 'Slippage per side (pip)', sStopMode: 'Take-profit / stop-loss', stopAtr: 'ATR multiples', stopPips: 'Fixed pips',
+      sAtrTf: 'ATR timeframe', sAtrP: 'ATR period (bars)', sAtrHint: 'Computed from bars already closed at the decision time.',
+      sTpMult: 'Take-profit = ATR ×', sSlMult: 'Stop-loss = ATR ×', sTp: 'Fixed take-profit (pip)', sSl: 'Fixed stop-loss (pip)',
+      sSlHint: 'Measured from the entry fill and held until the take-profit or stop-loss is hit, with no time limit. Set these before looking at results, and don’t keep tuning them afterwards.',
+      sPip: 'Price of 1 pip', sPoint: 'Price of 1 point', auto: 'Auto', autoVal: 'Auto ({v})',
+      sPointHint: 'Unit of the spread column. Usually 0.001 for USDJPY and 0.00001 for GBPUSD.',
+      sVisible: 'Bars shown by default', sShowTime: 'Time labels', showTimeOn: 'Server time (no date)', showTimeOff: 'Minutes relative to the decision',
+      sReveal: 'After answering', revealOn: 'Reveal what happened next', revealOff: 'Go straight to the next question', cancel: 'Cancel', save: 'Save',
+      indTitle: 'Indicator parameters', emaLines: 'EMA lines', emaPeriodAria: 'EMA period', remove: 'Remove', addEma: 'Add EMA', noEma: 'No EMA lines',
+      bbPeriod: 'Bollinger period', bbMult: 'Bollinger width (std devs)', rsiPeriod: 'RSI period', macdFast: 'MACD fast', macdSlow: 'MACD slow', macdSignal: 'MACD signal',
+      indHint: 'These only change what the chart shows, not the stats.', resetDefaults: 'Reset to defaults',
+      exportTitle: 'Copy your records', exportText: 'The file can’t be downloaded here. Select everything below, copy it and save it as a .csv file.', close: 'Close',
+      progress: 'Answered <b>{n}</b><span class="more"> · long {l}, short {s}, no trade {k}</span>',
+      reading: 'Reading {name} …', readFailed: 'Could not read the file. Please check its format.',
+      errHeader: 'The header has no time or open/high/low/close columns. Please check that this is M1 bar data.', errEmpty: 'The file is empty.',
+      tooFew: 'Too little data ({n} bars). At least a few thousand M1 bars are needed.', notM1: 'Bars in this file are {s} seconds apart, not M1. Please export M1 data.',
+      noSpread: 'No spread column, so costs include slippage only', skipped: 'Skipped {n} unreadable or duplicate rows', restored: 'Restored {n} earlier records', noteSep: '; ',
+      datasetDesc: '{name}, {n} M1 bars', demoName: 'Simulated data',
+      storageFail: 'Browser storage is unavailable. Records will be lost on reload, so export them soon.', savedOk: 'Data saved in this browser; next time you can open it directly',
+      quotaFail: 'Not enough browser storage, so the data wasn’t saved. Delete older data or export a shorter period.', storeFail: 'This browser doesn’t allow saving data, so you’ll need to choose the file again next time.',
+      readingSaved: 'Loading data from this browser …', savedMissing: 'This data is gone, probably cleared by the browser. Please choose the file again.', savedReadFail: 'Couldn’t load the saved data. Please choose the file again.',
+      deletedData: 'Data deleted; your records are kept', deleteFail: 'Delete failed, please try again',
+      savedDesc: '{n} M1 bars, {from} to {to}, about {mb} MB', savedAnswered: ', {n} answered', continueLast: 'Continue', open: 'Open', delete: 'Delete', confirmDelete: 'Click again to delete',
+      storageNote: 'Data and records live only in this browser and are deleted when you clear browser data.', storageUsage: ' About {mb} MB in use.',
+      downloading: 'Downloading {name} …', downloadFail: 'Couldn’t download {name} ({why}). Use “Choose your own file” instead.', networkError: 'network error',
+      crowded: 'This data is running out of non-overlapping questions. Load a longer data set to continue.', noMatch: 'No new questions match the current settings. Widen the hours or lower the spike threshold.',
+      recorded: 'Recorded', youChose: 'Your call: {dir}', spikeUp: ' · this was a spike up', spikeDown: ' · this was a spike down',
+      hAfter: 'After {h} min', midMove: 'mid', hMin: '{h} min', afterCost: 'net', comma: ', ', paren: ' ({v})',
+      stopsDesc: 'TP {tp} / SL {sl} pip', hitTp: 'take-profit hit first', hitSl: 'stop-loss hit first', hitEnd: 'neither hit before the data ends', heldFor: 'held {d}',
+      durMin: '{n} min', durHour: '{n} h', durDay: '{n} days',
+      noRecords: 'No records yet', deletedRecord: 'Deleted record {n}',
+      longTp: 'Long TP {p}', longSl: 'Long SL {p}', shortTp: 'Short TP {p}', shortSl: 'Short SL {p}',
+      exitTp: 'TP', exitSl: 'SL', exitEnd: 'Data end',
+      noQuestion: 'No question', hiddenAfter: 'What happens next is hidden', afterDecision: 'After decision', minRel: '{m}m', volPane: 'Volume (ticks)',
+      oShort: 'O', hShort: 'H', lShort: 'L', cShort: 'C', selectFirst: 'Select a drawing first',
+      noExport: 'Nothing to export yet', savedFile: 'Saved {f}', saveOpen: 'A save dialog is already open',
+      statsTitle: 'Your market sense stats',
+      statsIntro: 'Entry is the mid price at the open of the M1 bar after the decision, held for {h} minutes. All figures are in pips. Excess = your directional return minus the average drift of random moments under the same sampling; net = after the spread and {slip} pip of slippage per side.',
+      exportCsv: 'Export records (CSV)',
+      verdictFew: 'Fewer than 100 directional calls so far ({n}), so treat the numbers below as rough.',
+      verdictNet: 'The average return after costs is significantly positive (t = {t}). Worth breaking these calls down into features you can compute.',
+      verdictExcess: 'You beat the random baseline on direction (excess t = {t}), but not significantly after costs.',
+      verdictNone: 'So far your calls look no better than random direction at the same moments.',
+      yourCalls: 'Your calls', thGroup: 'Group', thN: 'Trades', thGross: 'Gross', thExcess: 'Excess', thExcessT: 'Excess t', thNet: 'Net', thNetT: 'Net t', thNetWin: 'Net win rate', thNetCI: 'Net 95% interval',
+      rangeSep: ' to ', rowAll: 'All directional', rowConf: 'Confidence {c}',
+      byStops: 'With take-profit and stop-loss', stopTextPips: 'Take-profit {tp} pip, stop-loss {sl} pip',
+      stopTextAtr: 'Take-profit {tpm} × ATR, stop-loss {slm} × ATR (ATR {p} on M{tf}, about {tp} and {sl} pip on average for these questions)',
+      stopsExplain: '{stop}, measured from the entry fill and held until one side is hit, with no time limit. If both are touched in the same bar it counts as a stop. R is after spread and slippage. “Random R” is the average of going long and short at the same moment; excess R is what your chosen direction adds to it. The last two columns ignore the stops: the largest favourable move minus the largest adverse move within 60 minutes, also compared with random direction.',
+      thTpFirst: 'TP first', thSlFirst: 'SL first', thHold: 'Avg hold', thAvgR: 'Avg R', thRt: 'R t', thRandR: 'Random R', thExR: 'Excess R', thExRt: 'Excess t', thMfeMae: 'Fav − adv (pip)', thT: 't',
+      rFew: 'Under 100 directional calls, so this is only a rough look: ', rSummary: '{few}With stops, your chosen direction averages {v} R {more} than random direction (t = {t}).', more: 'more', less: 'less',
+      controls: 'Controls', controlsText: 'Random direction at the same moments has an expected gross return of 0, about {c} pip after costs. Spike questions also get two mechanical rules: always fade the spike, and always follow it. Your calls need to beat both before picking trades adds anything.',
+      thRule: 'Rule', fadeRule: 'Always fade the spike', followRule: 'Always follow the spike',
+      skipsLine: 'No-trade questions: {n}. The random baseline uses 3,000 moments per sampling mode.'
+    }
+  };
+  function resolveLang() {
+    if (S.lang === 'zh' || S.lang === 'en') return S.lang;
+    const list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    return /^zh\b/i.test(list[0] || '') ? 'zh' : 'en';
+  }
+  let lang = resolveLang();
+  function tr(key, vars) {
+    let s = STR[lang][key];
+    if (s == null) s = STR.zh[key] != null ? STR.zh[key] : key;
+    return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : s;
+  }
+  const fmtInt = (n) => n.toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US');
+  function fmtDur(min) {
+    if (!(min >= 0)) return '–';
+    if (min < 120) return tr('durMin', { n: Math.round(min) });
+    if (min < 2880) return tr('durHour', { n: (min / 60).toFixed(1) });
+    return tr('durDay', { n: (min / 1440).toFixed(1) });
+  }
 
   /* ---------- small helpers ---------- */
   const pipSize = () => { const v = parseFloat(S.pip); return v > 0 ? v : state.meta.pip; };
@@ -1023,6 +1290,7 @@ window.BlindCore = (() => {
     $('#btnData').hidden = !loaded || view === 'setup';
     $('#progress').hidden = !loaded || view === 'setup';
     state.view.name = view;
+    $('.app').dataset.view = view;
     if (view === 'quiz') requestAnimationFrame(resize);
     if (view === 'stats') renderStats();
     if (view === 'setup') renderSaved();
@@ -1031,7 +1299,7 @@ window.BlindCore = (() => {
   function updateProgress() {
     const L = state.labels;
     const nl = L.filter((l) => l.dir === 1).length, ns = L.filter((l) => l.dir === -1).length, nn = L.filter((l) => l.dir === 0).length;
-    $('#progress').innerHTML = '已答 <b>' + L.length + '</b> 题<span class="more">，做多 ' + nl + '，做空 ' + ns + '，不做 ' + nn + '</span>';
+    $('#progress').innerHTML = tr('progress', { n: L.length, l: nl, s: ns, k: nn });
   }
 
   /* ---------- loading ---------- */
@@ -1041,7 +1309,7 @@ window.BlindCore = (() => {
   }
 
   async function loadFile(file) {
-    setStatus('正在读取 ' + file.name + ' …');
+    setStatus(tr('reading', { name: file.name }));
     const bar = $('#loadBar'); bar.hidden = false; bar.firstElementChild.style.width = '0%';
     try {
       const D = await C.parseFile(file, (p) => { bar.firstElementChild.style.width = Math.round(p * 100) + '%'; });
@@ -1050,7 +1318,7 @@ window.BlindCore = (() => {
       if (attachData(D, file.name, fp) && $('#keepData').checked) saveDataset(D, file.name, fp);
     } catch (err) {
       bar.hidden = true;
-      setStatus(err && err.message ? err.message : '读取失败，请确认文件格式。', true);
+      setStatus(tr(err && err.code === 'header' ? 'errHeader' : err && err.code === 'empty' ? 'errEmpty' : 'readFailed'), true);
     }
   }
 
@@ -1062,7 +1330,7 @@ window.BlindCore = (() => {
     hostedBusy = true;
     const btn = $('#btnHosted'), bar = $('#loadBar');
     btn.disabled = true;
-    setStatus('正在下载 ' + HOSTED_CSV + ' …');
+    setStatus(tr('downloading', { name: HOSTED_CSV }));
     try {
       const res = await fetch(HOSTED_CSV);
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1079,7 +1347,7 @@ window.BlindCore = (() => {
           chunks.push(value); got += value.length;
           if (got - shown > 262144) {
             shown = got;
-            setStatus('正在下载 ' + HOSTED_CSV + ' … ' + (got / 1048576).toFixed(1) + (len ? ' / ' + (len / 1048576).toFixed(1) : '') + ' MB');
+            setStatus(tr('downloading', { name: HOSTED_CSV }) + ' ' + (got / 1048576).toFixed(1) + (len ? ' / ' + (len / 1048576).toFixed(1) : '') + ' MB');
             if (len) bar.firstElementChild.style.width = Math.min(100, Math.round(got / len * 100)) + '%';
           }
         }
@@ -1090,36 +1358,38 @@ window.BlindCore = (() => {
       await loadFile(file);
     } catch (err) {
       bar.hidden = true;
-      setStatus('无法从网站下载 ' + HOSTED_CSV + '（' + (err && err.message ? err.message : '网络错误') + '），可以改用“选择自己的文件”。', true);
+      setStatus(tr('downloadFail', { name: HOSTED_CSV, why: err && err.message ? err.message : tr('networkError') }), true);
     } finally {
       hostedBusy = false; btn.disabled = false;
     }
   }
 
   function attachData(D, name, fp) {
-    if (D.n < 3000) { setStatus('数据太少（' + D.n + ' 根），至少需要几千根 M1。', true); return false; }
+    if (D.n < 3000) { setStatus(tr('tooFew', { n: D.n }), true); return false; }
     const meta = C.inferMeta(D);
-    if (meta.medianStep !== 60) { setStatus('这份数据相邻 K 线的间隔是 ' + meta.medianStep + ' 秒，不是 M1。请导出 M1 数据。', true); return false; }
+    if (meta.medianStep !== 60) { setStatus(tr('notM1', { s: meta.medianStep }), true); return false; }
     state.D = D; state.meta = meta; state.name = name; state.fp = fp;
-    state.baseCache.clear();
+    state.baseCache.clear(); barrierCache.clear();
     const saved = store.get('blindlab:labels:' + fp);
     state.labels = saved && Array.isArray(saved.labels) ? saved.labels : [];
     const notes = [];
-    if (!D.hasSpread) notes.push('文件里没有点差列，成本只按滑点计算');
-    if (D.skipped) notes.push('跳过了 ' + D.skipped + ' 行无法识别或时间重复的数据');
-    if (state.labels.length) notes.push('已恢复之前的 ' + state.labels.length + ' 条记录');
-    $('#datasetName').textContent = name + '，' + D.n.toLocaleString('zh-CN') + ' 根 M1';
+    if (!D.hasSpread) notes.push(tr('noSpread'));
+    if (D.skipped) notes.push(tr('skipped', { n: D.skipped }));
+    if (state.labels.length) notes.push(tr('restored', { n: state.labels.length }));
+    $('#datasetName').textContent = datasetDesc();
     setStatus('');
     updateProgress();
     show('quiz');
     nextQuestion();
-    if (notes.length) toast(notes.join('；'));
+    if (notes.length) toast(notes.join(tr('noteSep')));
     return true;
   }
 
+  function datasetDesc() { return tr('datasetDesc', { name: state.name, n: fmtInt(state.D.n) }); }
+
   function saveLabels() {
     if (!state.fp) return;
-    if (!store.set('blindlab:labels:' + state.fp, { labels: state.labels })) toast('浏览器存储不可用，刷新页面后记录会丢失，请及时导出。');
+    if (!store.set('blindlab:labels:' + state.fp, { labels: state.labels })) toast(tr('storageFail'));
   }
 
   /* ---------- datasets kept in this browser (IndexedDB) ---------- */
@@ -1189,34 +1459,34 @@ window.BlindCore = (() => {
     const meta = { id: fp, name, n: D.n, first: D.time[0], last: D.time[D.n - 1], bytes, savedAt: Date.now(), lastUsed: Date.now() };
     try {
       await idbRun(['meta', 'bars'], 'readwrite', (tx) => { tx.objectStore('bars').put(rec); tx.objectStore('meta').put(meta); });
-      toast('数据已保存到这个浏览器，下次可以直接打开');
+      toast(tr('savedOk'));
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     } catch (err) {
       const quota = err && (err.name === 'QuotaExceededError' || /quota/i.test(err.message || ''));
-      toast(quota ? '浏览器的存储空间不够，这份数据没有保存。可以删掉旧数据，或只导出较短的时间段。' : '这个浏览器不允许保存数据，下次需要重新选择文件。');
+      toast(tr(quota ? 'quotaFail' : 'storeFail'));
     }
   }
 
   async function openSaved(id) {
-    setStatus('正在从浏览器读取数据 …');
+    setStatus(tr('readingSaved'));
     try {
       const rec = await idbRun(['bars'], 'readonly', (tx) => tx.objectStore('bars').get(id));
       const meta = await idbRun(['meta'], 'readonly', (tx) => tx.objectStore('meta').get(id));
-      if (!rec || !meta) { setStatus('没有找到这份数据，可能已被浏览器清理，请重新选择文件。', true); renderSaved(); return; }
+      if (!rec || !meta) { setStatus(tr('savedMissing'), true); renderSaved(); return; }
       if (attachData(decodeBars(rec), meta.name, id)) {
         meta.lastUsed = Date.now();
         idbRun(['meta'], 'readwrite', (tx) => { tx.objectStore('meta').put(meta); }).catch(() => {});
       }
     } catch (err) {
-      setStatus('读取保存的数据失败，请重新选择文件。', true);
+      setStatus(tr('savedReadFail'), true);
     }
   }
 
   async function deleteSaved(id) {
     try {
       await idbRun(['meta', 'bars'], 'readwrite', (tx) => { tx.objectStore('meta').delete(id); tx.objectStore('bars').delete(id); });
-      toast('已删除这份数据，答题记录仍然保留');
-    } catch (err) { toast('删除失败，请稍后再试'); }
+      toast(tr('deletedData'));
+    } catch (err) { toast(tr('deleteFail')); }
     renderSaved();
   }
 
@@ -1235,20 +1505,20 @@ window.BlindCore = (() => {
       const desc = document.createElement('span');
       const saved = store.get('blindlab:labels:' + m.id);
       const answered = saved && Array.isArray(saved.labels) ? saved.labels.length : 0;
-      desc.textContent = m.n.toLocaleString('zh-CN') + ' 根 M1，' + ymdhm(m.first).slice(0, 10) + ' 至 ' + ymdhm(m.last).slice(0, 10) +
-        '，约 ' + Math.max(1, Math.round(m.bytes / 1048576)) + ' MB' + (answered ? '，已答 ' + answered + ' 题' : '');
+      desc.textContent = tr('savedDesc', { n: fmtInt(m.n), from: ymdhm(m.first).slice(0, 10), to: ymdhm(m.last).slice(0, 10), mb: Math.max(1, Math.round(m.bytes / 1048576)) }) +
+        (answered ? tr('savedAnswered', { n: answered }) : '');
       info.append(nameEl, desc);
       const act = document.createElement('div'); act.className = 'act';
       const openBtn = document.createElement('button');
-      openBtn.className = 'btn' + (i === 0 ? ' primary' : ''); openBtn.textContent = i === 0 ? '继续上次' : '打开';
+      openBtn.className = 'btn' + (i === 0 ? ' primary' : ''); openBtn.textContent = tr(i === 0 ? 'continueLast' : 'open');
       openBtn.addEventListener('click', () => openSaved(m.id));
       const delBtn = document.createElement('button');
-      delBtn.className = 'btn'; delBtn.textContent = '删除';
+      delBtn.className = 'btn'; delBtn.textContent = tr('delete');
       let armed = 0;
       delBtn.addEventListener('click', () => {
         if (Date.now() - armed > 4000) {
-          armed = Date.now(); delBtn.textContent = '再点一次删除';
-          setTimeout(() => { if (delBtn.isConnected) delBtn.textContent = '删除'; }, 4000);
+          armed = Date.now(); delBtn.textContent = tr('confirmDelete');
+          setTimeout(() => { if (delBtn.isConnected) delBtn.textContent = tr('delete'); }, 4000);
           return;
         }
         deleteSaved(m.id);
@@ -1258,11 +1528,11 @@ window.BlindCore = (() => {
       list.append(li);
     });
     const note = $('#storageNote');
-    note.textContent = '数据和答题记录只存在这个浏览器里，清除浏览器数据时会一起删除。';
+    note.textContent = tr('storageNote');
     if (navigator.storage && navigator.storage.estimate) {
       try {
         const est = await navigator.storage.estimate();
-        if (est && est.usage != null) note.textContent += '目前占用约 ' + Math.max(1, Math.round(est.usage / 1048576)) + ' MB。';
+        if (est && est.usage != null) note.textContent += tr('storageUsage', { mb: Math.max(1, Math.round(est.usage / 1048576)) });
       } catch (err) { /* ignore */ }
     }
   }
@@ -1277,7 +1547,7 @@ window.BlindCore = (() => {
       state.q = null; state.phase = 'idle';
       $('#decideBar').hidden = false; $('#resultBar').hidden = true;
       const crowded = used.length * cfg.spacing * 2 > state.D.n * 0.5;
-      toast(crowded ? '这份数据里不重叠的题目快用完了，换一份更长的数据再继续。' : '按当前设置找不到新题目，可以放宽时段或降低急涨急跌阈值。');
+      toast(tr(crowded ? 'crowded' : 'noMatch'));
       draw();
       return;
     }
@@ -1295,15 +1565,45 @@ window.BlindCore = (() => {
     draw();
   }
 
+  // M1 bars to show after the decision once revealed: at least the first hour, and on to the exit when the trade ran longer
+  function revealSpan() {
+    const rec = state.revealRec;
+    let span = HMAX;
+    if (rec && rec.dir !== 0) span = Math.max(span, barrierFor(rec.t, rec.dir).exitJ - rec.t + 3);
+    return Math.min(span, REVEAL_MAX);
+  }
+
   function rebuild() {
     const q = state.q; if (!q) return;
     const D = state.D;
-    const endIdx = state.phase === 'revealed' ? q.t + HMAX : q.t;
-    const B = C.buildBars(D, endIdx, state.tf, LOADBARS);
+    const endIdx = state.phase === 'revealed' ? Math.min(D.n - 1, q.t + revealSpan()) : q.t;
+    const B = C.buildBars(D, endIdx, state.tf, LOADBARS + Math.ceil((endIdx - q.t) / state.tf) + 2);
     let di = B.n - 1;
     while (di > 0 && B.time[di] > D.time[q.t]) di--;
     state.B = B; state.dec = di; state.decT = D.time[q.t] + 60;
-    state.I = C.indicators(B);
+    state.I = C.indicators(B, indParams());
+  }
+
+  // index of the bar on the current timeframe that contains time T
+  function barAt(T) {
+    const B = state.B;
+    let lo = 0, hi = B.n - 1, i = 0;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (B.time[mid] <= T) { i = mid; lo = mid + 1; } else hi = mid - 1; }
+    return i;
+  }
+
+  // after the reveal, keep the decision in view and show the first hour, zooming out (within limits) so a longer trade is visible up to its exit
+  function fitRevealView() {
+    const B = state.B, dec = state.dec, rec = state.revealRec;
+    let target = Math.min(B.n - 1, dec + Math.ceil(HMAX / state.tf));
+    if (rec && rec.dir !== 0) target = Math.max(target, Math.min(B.n - 1, barAt(state.D.time[barrierFor(rec.t, rec.dir).exitJ]) + 1));
+    const hist = () => Math.max(10, Math.round(state.view.count * 0.2));
+    for (let k = 0; k < 3; k++) {
+      const need = Math.max(dec, target - padCount()) - dec + hist() + 1;
+      if (need > state.view.count) state.view.count = clampCount(need);
+    }
+    state.view.end = Math.min(Math.max(dec, target - padCount()), dec - hist() + state.view.count - 1);
+    setEnd(state.view.end);
   }
 
   function decide(dir) {
@@ -1315,7 +1615,7 @@ window.BlindCore = (() => {
       id: state.labels.length ? state.labels[state.labels.length - 1].id + 1 : 1,
       t: q.t, time: state.D.time[q.t], dir, conf: state.conf,
       note: $('#noteInput').value.trim(), ms: Date.now() - q.shownAt, tf: state.tf,
-      ind: Object.keys(state.ind).filter((k) => state.ind[k]).join(' '),
+      ind: indSummary(),
       draw: state.drawings.map((d) => ({ type: d.type, p1: d.p1, p2: d.p2 || null })),
       ctx: q.ctx, cfg: q.cfg, at: new Date().toISOString()
     };
@@ -1323,7 +1623,7 @@ window.BlindCore = (() => {
     saveLabels();
     updateProgress();
     if (S.reveal) revealAnswer(rec);
-    else { toast('已记录'); nextQuestion(); }
+    else { toast(tr('recorded')); nextQuestion(); }
   }
 
   function revealAnswer(rec) {
@@ -1331,10 +1631,7 @@ window.BlindCore = (() => {
     state.revealRec = rec;
     state.selected = -1; state.draft = null;
     rebuild();
-    const future = state.B.n - 1 - state.dec;
-    const padSlots = padCount();
-    if (future > padSlots) state.view.end = Math.min(state.B.n - 1, state.dec + (future - padSlots));
-    else state.view.end = state.dec;
+    fitRevealView();
     renderResult(rec);
     $('#decideBar').hidden = true; $('#resultBar').hidden = false;
     $('#btnNext').focus({ preventScroll: true });
@@ -1351,41 +1648,56 @@ window.BlindCore = (() => {
 
   function renderResult(rec) {
     const D = state.D, pip = pipSize(), point = pointSize(), slip = +S.slip || 0;
-    const dirName = rec.dir === 1 ? '做多' : rec.dir === -1 ? '做空' : '不做';
-    const ctxName = rec.ctx === 1 ? '，这是一次急涨' : rec.ctx === -1 ? '，这是一次急跌' : '';
-    let html = '<span class="verdict">你选择了' + dirName + ctxName + '</span>';
+    const dirName = tr(rec.dir === 1 ? 'long' : rec.dir === -1 ? 'short' : 'skip');
+    const ctxName = rec.ctx === 1 ? tr('spikeUp') : rec.ctx === -1 ? tr('spikeDown') : '';
+    let html = '<span class="verdict">' + tr('youChose', { dir: dirName }) + ctxName + '</span>';
     HS.forEach((h) => {
       const g = C.longGross(D, rec.t, h, pip, point);
       if (rec.dir === 0) {
-        html += '<span class="h"><span>' + h + ' 分钟后</span>中间价 <b class="' + cls(g) + '">' + sgn(g) + '</b> pip</span>';
+        html += '<span class="h"><span>' + tr('hAfter', { h }) + '</span>' + tr('midMove') + ' <b class="' + cls(g) + '">' + sgn(g) + '</b> pip</span>';
       } else {
         const gross = rec.dir * g, net = gross - C.costPips(D, rec.t, h, pip, point, slip);
-        html += '<span class="h"><span>' + h + ' 分钟</span><b class="' + cls(gross) + '">' + sgn(gross) + '</b> pip，扣成本 <b class="' + cls(net) + '">' + sgn(net) + '</b></span>';
+        html += '<span class="h"><span>' + tr('hMin', { h }) + '</span><b class="' + cls(gross) + '">' + sgn(gross) + '</b> pip' + tr('comma') + tr('afterCost') + ' <b class="' + cls(net) + '">' + sgn(net) + '</b></span>';
       }
     });
     if (rec.dir !== 0) {
-      const st = stopsPips(rec.t), tpv = st.tp, slv = st.sl;
-      const b = C.barrier(D, rec.t, rec.dir, tpv, slv, pip, point, slip);
-      const how = b.how === 'tp' ? '先到止盈' : b.how === 'sl' ? '先到止损' : '60 分钟内两边都没碰到';
-      html += '<span class="h"><span>止盈 ' + tpv.toFixed(1) + ' / 止损 ' + slv.toFixed(1) + ' pip</span>' + how + '，<b class="' + cls(b.pips) + '">' + sgn(b.pips) + '</b> pip（' + sgn(b.r, 2) + ' R）</span>';
+      const st = stopsPips(rec.t);
+      const b = barrierFor(rec.t, rec.dir);
+      const how = tr(b.how === 'tp' ? 'hitTp' : b.how === 'sl' ? 'hitSl' : 'hitEnd');
+      html += '<span class="h"><span>' + tr('stopsDesc', { tp: st.tp.toFixed(1), sl: st.sl.toFixed(1) }) + '</span>' + how + tr('comma') + tr('heldFor', { d: fmtDur(b.mins) }) + tr('comma') +
+        '<b class="' + cls(b.pips) + '">' + sgn(b.pips) + '</b> pip' + tr('paren', { v: sgn(b.r, 2) + ' R' }) + '</span>';
     }
     $('#resultBox').innerHTML = html;
   }
 
   function undoLabel() {
-    if (!state.labels.length) { toast('还没有记录'); return; }
+    if (!state.labels.length) { toast(tr('noRecords')); return; }
     const last = state.labels.pop();
     saveLabels(); updateProgress();
-    toast('已删除第 ' + last.id + ' 条记录');
+    toast(tr('deletedRecord', { n: last.id }));
     if (state.phase === 'revealed' && state.q && state.q.t === last.t) nextQuestion();
   }
 
   /* ---------- take-profit / stop-loss ---------- */
   function stopsPips(t) {
     if (S.stopMode === 'pips') return { tp: Math.max(0.1, +S.tp || 10), sl: Math.max(0.1, +S.sl || 10), atr: NaN };
-    const atr = C.atrAt(state.D, t, +S.atrTf || 1, 14) / pipSize();
+    const atr = C.atrAt(state.D, t, +S.atrTf || 1, atrPeriod()) / pipSize();
     const ok = atr > 0 && isFinite(atr);
     return { tp: ok ? (+S.tpMult || 2) * atr : 10, sl: ok ? (+S.slMult || 1.5) * atr : 10, atr };
+  }
+
+  // trades have no time limit, so a stop-out can be far away; remember each result
+  const barrierCache = new Map();
+  function barrierFor(t, dir) {
+    const pip = pipSize(), point = pointSize(), slip = +S.slip || 0, st = stopsPips(t);
+    const key = t + '|' + dir + '|' + st.tp + '|' + st.sl + '|' + slip + '|' + pip + '|' + point;
+    let b = barrierCache.get(key);
+    if (!b) {
+      if (barrierCache.size > 50000) barrierCache.clear();
+      b = C.barrier(state.D, t, dir, st.tp, st.sl, pip, point, slip);
+      barrierCache.set(key, b);
+    }
+    return b;
   }
 
   function stopPlan() {
@@ -1396,7 +1708,7 @@ window.BlindCore = (() => {
     if (state.phase === 'revealed') {
       const rec = state.revealRec;
       if (!rec || rec.dir === 0) return null;
-      const b = C.barrier(D, q.t, rec.dir, st.tp, st.sl, pip, point, slip);
+      const b = barrierFor(q.t, rec.dir);
       return { mode: 'actual', dir: rec.dir, st, b, entry: b.entry, tp: b.entry + rec.dir * st.tp * pip, sl: b.entry - rec.dir * st.sl * pip };
     }
     const eL = D.close[q.t] + D.spread[q.t] * point + slip * pip, eS = D.close[q.t] - slip * pip;
@@ -1432,11 +1744,10 @@ window.BlindCore = (() => {
       [[1, plan.long], [-1, plan.short]].forEach(([dir, lv]) => {
         const a = pd == null ? 0.8 : (pd === dir ? 1 : 0.15);
         const dash = dir === 1 ? [7, 3] : [2, 3];
-        const nm = dir === 1 ? '做多' : '做空';
         hl(pToY(lv.tp), xDecR, LY.plotR, col.up, dash, a);
         hl(pToY(lv.sl), xDecR, LY.plotR, col.down, dash, a);
-        items.push({ y: pToY(lv.tp), text: nm + '止盈 ' + fmtP(lv.tp), color: col.up, a });
-        items.push({ y: pToY(lv.sl), text: nm + '止损 ' + fmtP(lv.sl), color: col.down, a });
+        items.push({ y: pToY(lv.tp), text: tr(dir === 1 ? 'longTp' : 'shortTp', { p: fmtP(lv.tp) }), color: col.up, a });
+        items.push({ y: pToY(lv.sl), text: tr(dir === 1 ? 'longSl' : 'shortSl', { p: fmtP(lv.sl) }), color: col.down, a });
       });
       if (LY.plotR - xDecR > 70) {
         g.setLineDash([]); g.font = font(10.5, 500); g.textAlign = 'right'; g.textBaseline = 'middle';
@@ -1449,7 +1760,7 @@ window.BlindCore = (() => {
       }
     } else {
       const D = state.D, b = plan.b;
-      const xe = timeToX(D.time[b.exitJ] + (b.how === 'time' ? 0 : 30));
+      const xe = timeToX(D.time[b.exitJ] + (b.how === 'end' ? 60 : 30));
       const xEnd = Math.max(xDecR + 4, Math.min(LY.plotR, xe));
       hl(pToY(plan.entry), xDecR, xEnd, col.ink, [4, 3], 0.75);
       hl(pToY(plan.tp), xDecR, xEnd, col.up, [], 0.95);
@@ -1459,7 +1770,7 @@ window.BlindCore = (() => {
         g.globalAlpha = 1; g.setLineDash([]);
         g.fillStyle = clr; g.strokeStyle = col.bg; g.lineWidth = 2;
         g.beginPath(); g.arc(xe, ye, 5, 0, Math.PI * 2); g.fill(); g.stroke();
-        const nm = b.how === 'tp' ? '止盈' : b.how === 'sl' ? '止损' : '到时平仓';
+        const nm = tr(b.how === 'tp' ? 'exitTp' : b.how === 'sl' ? 'exitSl' : 'exitEnd');
         const txt = nm + ' ' + sgn(b.pips) + ' pip';
         g.font = font(11, 600);
         const w = g.measureText(txt).width;
@@ -1499,7 +1810,7 @@ window.BlindCore = (() => {
     col = {
       bg: v('--chart-bg'), ink: v('--ink'), ink2: v('--ink-2'), rule: v('--rule'), grid: v('--grid'),
       up: v('--up'), down: v('--down'), accent: v('--accent'), curtain: v('--curtain'), hatch: v('--hatch'),
-      future: v('--future'), font: v('--font')
+      future: v('--future'), font: v('--font'), ema3: v('--ema3'), ema4: v('--ema4')
     };
   }
 
@@ -1588,7 +1899,7 @@ window.BlindCore = (() => {
     g.fillStyle = col.bg; g.fillRect(0, 0, LY.W, LY.H);
     if (!state.B || !state.q) {
       g.fillStyle = col.ink2; g.font = font(13); g.textAlign = 'center';
-      g.fillText('没有题目', LY.W / 2, LY.H / 2);
+      g.fillText(tr('noQuestion'), LY.W / 2, LY.H / 2);
       return;
     }
     const plan = stopPlan();
@@ -1657,8 +1968,7 @@ window.BlindCore = (() => {
       g.stroke(); g.setLineDash([]);
     };
     if (state.ind.bb) { line(I.bb.up, col.ink2, 1, [3, 3]); line(I.bb.mid, col.ink2, 1); line(I.bb.lo, col.ink2, 1, [3, 3]); }
-    if (state.ind.ema20) line(I.ema20, col.accent, 1.4);
-    if (state.ind.ema50) line(I.ema50, col.ink, 1.2, [6, 3]);
+    IP.emas.forEach((e, k) => { if (e.on && I.emas[k]) { const st = emaStyle(k); line(I.emas[k], col[st.c], st.w, st.dash); } });
     g.restore();
 
     // curtain
@@ -1672,7 +1982,7 @@ window.BlindCore = (() => {
         g.restore();
         if (!revealed && !plan && LY.plotR - x0 > 90) {
           g.font = font(12); g.textAlign = 'center'; g.textBaseline = 'middle';
-          const msg = '后面的走势已隐藏', tw = g.measureText(msg).width + 16, cx = (x0 + LY.plotR) / 2, cy = LY.main.y0 + LY.main.h / 2;
+          const msg = tr('hiddenAfter'), tw = g.measureText(msg).width + 16, cx = (x0 + LY.plotR) / 2, cy = LY.main.y0 + LY.main.h / 2;
           g.fillStyle = col.curtain; g.fillRect(cx - tw / 2, cy - 11, tw, 22);
           g.fillStyle = col.ink2; g.fillText(msg, cx, cy);
         }
@@ -1685,7 +1995,7 @@ window.BlindCore = (() => {
     g.setLineDash([]); g.globalAlpha = 1;
     if (revealed && xDecR < LY.plotR - 60 && xDecR > LY.plotL) {
       g.font = font(11, 500); g.textBaseline = 'top'; g.textAlign = 'left'; g.fillStyle = col.ink2;
-      g.fillText('决策之后', xDecR + 6, LY.main.y0 + LY.main.h - 18);
+      g.fillText(tr('afterDecision'), xDecR + 6, LY.main.y0 + LY.main.h - 18);
     }
 
     // last price tag at decision (the take-profit / stop tags replace it after the reveal)
@@ -1722,7 +2032,7 @@ window.BlindCore = (() => {
   function timeLabel(ts) {
     if (S.showTime) return hhmm(ts);
     const m = Math.round((ts + state.B.step - state.decT) / 60);
-    return (m > 0 ? '+' : m < 0 ? '−' : '') + Math.abs(m) + ' 分';
+    return tr('minRel', { m: (m > 0 ? '+' : m < 0 ? '−' : '') + Math.abs(m) });
   }
 
   function priceTag(p, bgc, fgc) {
@@ -1764,7 +2074,7 @@ window.BlindCore = (() => {
     }
     g.restore();
     g.fillStyle = col.ink2; g.font = font(10);
-    const names = { vol: '成交量（tick）', rsi: 'RSI 14', macd: 'MACD 12, 26, 9' };
+    const names = { vol: tr('volPane'), rsi: 'RSI ' + IP.rsiP, macd: 'MACD ' + IP.macdF + ', ' + IP.macdS + ', ' + IP.macdSig };
     g.fillText(names[p.key], LY.plotL + 6, p.y0 + 10);
     if (p.key === 'rsi') { g.fillText('70', LY.plotR + 6, yOf(70, 0, 100)); g.fillText('30', LY.plotR + 6, yOf(30, 0, 100)); }
   }
@@ -1853,8 +2163,8 @@ window.BlindCore = (() => {
     }
     const pip = pipSize();
     const parts = [
-      ['开', fmtP(B.open[i])], ['高', fmtP(B.high[i])], ['低', fmtP(B.low[i])], ['收', fmtP(B.close[i])],
-      ['ATR 14', isNaN(I.atr[i]) ? '–' : (I.atr[i] / pip).toFixed(1) + ' pip']
+      [tr('oShort'), fmtP(B.open[i])], [tr('hShort'), fmtP(B.high[i])], [tr('lShort'), fmtP(B.low[i])], [tr('cShort'), fmtP(B.close[i])],
+      ['ATR ' + atrPeriod(), isNaN(I.atr[i]) ? '–' : (I.atr[i] / pip).toFixed(1) + ' pip']
     ];
     if (S.showTime) parts.unshift(['', hhmm(B.time[i])]);
     g.font = font(11); g.textAlign = 'left'; g.textBaseline = 'top';
@@ -1872,13 +2182,14 @@ window.BlindCore = (() => {
       g.font = font(11, 500); g.fillStyle = col.ink; g.fillText(v, x, y); x += vw + 10;
     });
     const legend = [];
-    if (state.ind.ema20) legend.push(['EMA 20', col.accent, I.ema20[i]]);
-    if (state.ind.ema50) legend.push(['EMA 50', col.ink, I.ema50[i]]);
-    let lx = LY.plotL + 8;
+    IP.emas.forEach((e, k) => { if (e.on && I.emas[k]) legend.push(['EMA ' + e.p, col[emaStyle(k).c], I.emas[k][i]]); });
+    let lx = LY.plotL + 8, ly = y + 16;
     legend.forEach(([n, c, v]) => {
       g.fillStyle = c; g.font = font(11, 500);
       const txt = n + ' ' + (isNaN(v) ? '–' : fmtP(v));
-      g.fillText(txt, lx, y + 16); lx += g.measureText(txt).width + 12;
+      const w = g.measureText(txt).width;
+      if (lx > LY.plotL + 8 && lx + w > LY.plotR - 8) { lx = LY.plotL + 8; ly += 16; }
+      g.fillText(txt, lx, ly); lx += w + 12;
     });
   }
 
@@ -2073,7 +2384,7 @@ window.BlindCore = (() => {
   $('#btnDelDrawing').addEventListener('click', deleteSelected);
   $('#btnClearDrawings').addEventListener('click', () => { state.drawings = []; state.selected = -1; state.draft = null; draw(); });
   function deleteSelected() {
-    if (state.selected < 0) { toast('先点选一个图形'); return; }
+    if (state.selected < 0) { toast(tr('selectFirst')); return; }
     state.drawings.splice(state.selected, 1); state.selected = -1; draw();
   }
 
@@ -2083,23 +2394,97 @@ window.BlindCore = (() => {
     state.tf = tf;
     $$('#tfSeg button').forEach((x) => x.setAttribute('aria-pressed', String(+x.dataset.tf === tf)));
     rebuild();
-    if (state.phase === 'revealed') {
-      const future = state.B.n - 1 - state.dec, padSlots = padCount();
-      state.view.end = future > padSlots ? Math.min(state.B.n - 1, state.dec + future - padSlots) : state.dec;
-    } else state.view.end = state.dec;
-    setEnd(state.view.end);
+    if (state.phase === 'revealed') fitRevealView();
+    else { state.view.end = state.dec; setEnd(state.view.end); }
     draw();
   }
 
-  function syncChips() {
-    $$('#indChips .chip').forEach((b) => b.setAttribute('aria-pressed', String(!!state.ind[b.dataset.ind])));
+  /* ---------- indicator chips & parameters ---------- */
+  const EMA_CSS = { accent: '--accent', ink: '--ink', ema3: '--ema3', ema4: '--ema4', ink2: '--ink-2' };
+  const emaStyle = (k) => EMA_STYLES[k % EMA_STYLES.length];
+  function emaSwatch(k) {
+    const st = emaStyle(k);
+    return '2px ' + (!st.dash.length ? 'solid' : st.dash[0] <= 2 ? 'dotted' : 'dashed') + ' var(' + EMA_CSS[st.c] + ')';
   }
-  $$('#indChips .chip').forEach((b) => b.addEventListener('click', () => {
-    const k = b.dataset.ind; state.ind[k] = !state.ind[k];
-    store.set('blindlab:ind', state.ind);
-    syncChips(); layout(); draw();
-  }));
-  syncChips();
+
+  function renderChips() {
+    const box = $('#indChips');
+    box.textContent = '';
+    const add = (label, isOn, toggle, swatch) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip';
+      b.setAttribute('aria-pressed', String(!!isOn));
+      if (swatch) { const sw = document.createElement('i'); sw.className = 'sw'; sw.style.borderTop = swatch; b.append(sw); }
+      b.append(label);
+      b.addEventListener('click', () => { b.setAttribute('aria-pressed', String(toggle())); layout(); draw(); });
+      box.append(b);
+    };
+    const flip = (k) => () => { state.ind[k] = !state.ind[k]; store.set('blindlab:ind', state.ind); return state.ind[k]; };
+    IP.emas.forEach((e, k) => add(tr('emaChip', { p: e.p }), e.on, () => { e.on = !e.on; saveIP(); return e.on; }, emaSwatch(k)));
+    add(tr('bbChip', { p: IP.bbP, k: IP.bbK }), state.ind.bb, flip('bb'));
+    add(tr('volChip'), state.ind.vol, flip('vol'));
+    add(tr('rsiChip', { p: IP.rsiP }), state.ind.rsi, flip('rsi'));
+    add(tr('macdChip', { f: IP.macdF, s: IP.macdS, g: IP.macdSig }), state.ind.macd, flip('macd'));
+    add(tr('stopsChip'), state.ind.stops, flip('stops'));
+  }
+  renderChips();
+
+  let emaDraft = [];
+  function renderEmaRows() {
+    const list = $('#emaList');
+    list.textContent = '';
+    emaDraft.forEach((e, k) => {
+      const row = document.createElement('div'); row.className = 'ema-row';
+      const sw = document.createElement('i'); sw.className = 'sw'; sw.style.borderTop = emaSwatch(k);
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = '1'; inp.max = '1000'; inp.step = '1'; inp.value = e.p;
+      inp.setAttribute('aria-label', tr('emaPeriodAria'));
+      inp.addEventListener('input', () => { e.p = inp.value; });
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'btn'; del.textContent = tr('remove');
+      del.addEventListener('click', () => { emaDraft.splice(k, 1); renderEmaRows(); });
+      row.append(sw, inp, del);
+      list.append(row);
+    });
+    if (!emaDraft.length) { const p = document.createElement('p'); p.className = 'muted ema-none'; p.textContent = tr('noEma'); list.append(p); }
+    $('#btnAddEma').disabled = emaDraft.length >= EMA_MAX;
+  }
+  function fillIndForm(src) {
+    emaDraft = src.emas.map((e) => ({ p: e.p, on: e.on }));
+    renderEmaRows();
+    $('#iBbP').value = src.bbP; $('#iBbK').value = src.bbK; $('#iRsiP').value = src.rsiP;
+    $('#iMacdF').value = src.macdF; $('#iMacdS').value = src.macdS; $('#iMacdSig').value = src.macdSig;
+  }
+  $('#btnIndParams').addEventListener('click', () => {
+    fillIndForm(IP);
+    $('#indDlg').returnValue = '';
+    $('#indDlg').showModal();
+  });
+  $('#btnIndReset').addEventListener('click', () => fillIndForm(IND_DEFAULTS));
+  $('#btnAddEma').addEventListener('click', () => {
+    if (emaDraft.length >= EMA_MAX) return;
+    const used = new Set(emaDraft.map((e) => Math.round(+e.p)));
+    emaDraft.push({ p: [8, 20, 50, 100, 200, 13, 34, 89, 144].find((p) => !used.has(p)) || 10, on: true });
+    renderEmaRows();
+    const inputs = $$('#emaList input');
+    if (inputs.length) { inputs[inputs.length - 1].focus(); inputs[inputs.length - 1].select(); }
+  });
+  $('#indDlg').addEventListener('close', () => {
+    if ($('#indDlg').returnValue !== 'ok') return;
+    const int = (v, lo, hi, d) => { const n = parseInt(v, 10); return isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+    IP.emas = emaDraft.map((e) => ({ p: int(e.p, 1, 1000, 20), on: e.on }));
+    IP.bbP = int($('#iBbP').value, 2, 500, 20);
+    const bk = parseFloat($('#iBbK').value);
+    IP.bbK = isFinite(bk) ? Math.max(0.1, Math.min(10, bk)) : 2;
+    IP.rsiP = int($('#iRsiP').value, 2, 500, 14);
+    IP.macdF = int($('#iMacdF').value, 1, 500, 12);
+    IP.macdS = int($('#iMacdS').value, 2, 500, 26);
+    IP.macdSig = int($('#iMacdSig').value, 1, 500, 9);
+    saveIP();
+    renderChips();
+    if (state.q) rebuild();
+    layout(); draw();
+  });
   $('#zoomIn').addEventListener('click', () => zoom(1 / 1.25));
   $('#zoomOut').addEventListener('click', () => zoom(1.25));
   $('#magnet').addEventListener('click', () => { state.magnet = !state.magnet; $('#magnet').setAttribute('aria-pressed', String(state.magnet)); });
@@ -2173,10 +2558,10 @@ window.BlindCore = (() => {
       const excess = l.dir * (lg - (mu ? mu.m[hj] : 0));
       const net = gross - C.costPips(D, l.t, h, pip, point, slip);
       const st = stopsPips(l.t), tpv = st.tp, slv = st.sl;
-      const bu = C.barrier(D, l.t, l.dir, tpv, slv, pip, point, slip);
-      const bl = C.barrier(D, l.t, 1, tpv, slv, pip, point, slip), bs = C.barrier(D, l.t, -1, tpv, slv, pip, point, slip);
+      const bu = barrierFor(l.t, l.dir);
+      const bl = barrierFor(l.t, 1), bs = barrierFor(l.t, -1);
       const ex = (b) => b.mfe - b.mae;
-      const r = { gross, excess, net, R: bu.r, Rrand: (bl.r + bs.r) / 2, Rx: bu.r - (bl.r + bs.r) / 2, how: bu.how, exc: ex(bu) - (ex(bl) + ex(bs)) / 2, tp: tpv, sl: slv };
+      const r = { gross, excess, net, R: bu.r, Rrand: (bl.r + bs.r) / 2, Rx: bu.r - (bl.r + bs.r) / 2, how: bu.how, hold: bu.mins, exc: ex(bu) - (ex(bl) + ex(bs)) / 2, tp: tpv, sl: slv };
       recs.push(r);
       rows.all.push(r);
       rows[l.dir === 1 ? 'long' : 'short'].push(r);
@@ -2191,7 +2576,8 @@ window.BlindCore = (() => {
       Rx: C.summarize(arr.map((r) => r.Rx)),
       exc: C.summarize(arr.map((r) => r.exc)),
       tpRate: arr.length ? arr.filter((r) => r.how === 'tp').length / arr.length : NaN,
-      slRate: arr.length ? arr.filter((r) => r.how === 'sl').length / arr.length : NaN
+      slRate: arr.length ? arr.filter((r) => r.how === 'sl').length / arr.length : NaN,
+      hold: arr.length ? arr.reduce((a, r) => a + r.hold, 0) / arr.length : NaN
     });
     const out = {};
     Object.keys(rows).forEach((k) => { out[k] = sum(rows[k]); });
@@ -2224,39 +2610,42 @@ window.BlindCore = (() => {
     const s = computeStats(h);
     const n = s.all.net.n || 0;
     let verdict;
-    if (n < 100) verdict = '方向题还不到 100 道（现在 ' + n + ' 道），下面的数字只能作参考。';
-    else if (s.all.net.t > 3 && s.all.net.mean > 0) verdict = '扣除成本后的平均收益显著为正（t = ' + ft(s.all.net.t) + '），值得把这些判断拆成可计算的特征。';
-    else if (s.all.excess.t > 2) verdict = '相对随机基准有方向判断力（超额 t = ' + ft(s.all.excess.t) + '），但扣除成本后还不够显著。';
-    else verdict = '目前看不出你的判断优于同一批时刻的随机方向。';
+    if (n < 100) verdict = tr('verdictFew', { n });
+    else if (s.all.net.t > 3 && s.all.net.mean > 0) verdict = tr('verdictNet', { t: ft(s.all.net.t) });
+    else if (s.all.excess.t > 2) verdict = tr('verdictExcess', { t: ft(s.all.excess.t) });
+    else verdict = tr('verdictNone');
 
     const row = (name, r) => '<tr><td>' + name + '</td><td>' + (r.net.n || 0) + '</td><td>' + f1(r.gross.mean) + '</td><td>' + f1(r.excess.mean) +
       '</td><td>' + ft(r.excess.t) + '</td><td class="' + (r.net.mean > 0 ? 'pos' : r.net.mean < 0 ? 'neg' : '') + '">' + f1(r.net.mean) +
-      '</td><td>' + ft(r.net.t) + '</td><td>' + fpct(r.net.win) + '</td><td>' + (isNaN(r.net.lo) || r.net.lo == null ? '–' : f1(r.net.lo) + ' ～ ' + f1(r.net.hi)) + '</td></tr>';
+      '</td><td>' + ft(r.net.t) + '</td><td>' + fpct(r.net.win) + '</td><td>' + (isNaN(r.net.lo) || r.net.lo == null ? '–' : f1(r.net.lo) + tr('rangeSep') + f1(r.net.hi)) + '</td></tr>';
 
     const ctrl = (name, r) => '<tr><td>' + name + '</td><td>' + (r.n || 0) + '</td><td class="' + (r.mean > 0 ? 'pos' : r.mean < 0 ? 'neg' : '') + '">' + f1(r.mean) + '</td><td>' + ft(r.t) + '</td><td>' + fpct(r.win) + '</td></tr>';
 
-    let html = '<h2>你的盘感统计</h2>';
-    html += '<p>入场为决策后下一根 M1 的开盘中间价，持有 ' + h + ' 分钟。单位都是 pip。超额 = 你的方向收益减去同一抽题方式下随机时刻的平均漂移；净值 = 扣掉点差和每边 ' + (+S.slip || 0) + ' pip 滑点之后。</p>';
-    html += '<div class="row"><span class="seg" id="hSeg">' + HS.map((x) => '<button data-h="' + x + '" aria-pressed="' + (x === h) + '">' + x + ' 分钟</button>').join('') + '</span>' +
-      '<button class="btn primary" id="btnExport">导出标注 CSV</button></div>';
+    const th = (keys) => keys.map((k) => '<th>' + tr(k) + '</th>').join('');
+    const groups = (fn) => fn(tr('rowAll'), s.all) + fn(tr('long'), s.long) + fn(tr('short'), s.short) +
+      fn(tr('rowConf', { c: 3 }), s.c3) + fn(tr('rowConf', { c: 2 }), s.c2) + fn(tr('rowConf', { c: 1 }), s.c1);
+
+    let html = '<h2>' + tr('statsTitle') + '</h2>';
+    html += '<p>' + tr('statsIntro', { h, slip: +S.slip || 0 }) + '</p>';
+    html += '<div class="row"><span class="seg" id="hSeg">' + HS.map((x) => '<button data-h="' + x + '" aria-pressed="' + (x === h) + '">' + tr('hMin', { h: x }) + '</button>').join('') + '</span>' +
+      '<button class="btn primary" id="btnExport">' + tr('exportCsv') + '</button></div>';
     html += '<p class="summary">' + verdict + '</p>';
-    html += '<h3>你的判断</h3><div class="tablewrap"><table><thead><tr><th>分组</th><th>笔数</th><th>毛收益</th><th>超额</th><th>超额 t</th><th>净收益</th><th>净 t</th><th>净胜率</th><th>净收益 95% 区间</th></tr></thead><tbody>' +
-      row('全部方向题', s.all) + row('做多', s.long) + row('做空', s.short) + row('把握 3', s.c3) + row('把握 2', s.c2) + row('把握 1', s.c1) + '</tbody></table></div>';
-    const stopText = S.stopMode === 'pips' ? '止盈 ' + (+S.tp || 10) + ' pip、止损 ' + (+S.sl || 10) + ' pip' :
-      '止盈 ' + (+S.tpMult || 2) + ' × ATR、止损 ' + (+S.slMult || 1.5) + ' × ATR（M' + (+S.atrTf || 1) + ' 的 ATR 14，这批题平均约为 ' +
-      (isNaN(s.avgTp) ? '–' : s.avgTp.toFixed(1)) + ' pip 和 ' + (isNaN(s.avgSl) ? '–' : s.avgSl.toFixed(1)) + ' pip）';
-    const brow = (name, r) => '<tr><td>' + name + '</td><td>' + (r.R.n || 0) + '</td><td>' + fpct(r.tpRate) + '</td><td>' + fpct(r.slRate) +
+    html += '<h3>' + tr('yourCalls') + '</h3><div class="tablewrap"><table><thead><tr>' +
+      th(['thGroup', 'thN', 'thGross', 'thExcess', 'thExcessT', 'thNet', 'thNetT', 'thNetWin', 'thNetCI']) + '</tr></thead><tbody>' + groups(row) + '</tbody></table></div>';
+    const stopText = S.stopMode === 'pips' ? tr('stopTextPips', { tp: +S.tp || 10, sl: +S.sl || 10 }) :
+      tr('stopTextAtr', { tpm: +S.tpMult || 2, slm: +S.slMult || 1.5, tf: +S.atrTf || 1, p: atrPeriod(), tp: isNaN(s.avgTp) ? '–' : s.avgTp.toFixed(1), sl: isNaN(s.avgSl) ? '–' : s.avgSl.toFixed(1) });
+    const brow = (name, r) => '<tr><td>' + name + '</td><td>' + (r.R.n || 0) + '</td><td>' + fpct(r.tpRate) + '</td><td>' + fpct(r.slRate) + '</td><td>' + fmtDur(r.hold) +
       '</td><td class="' + (r.R.mean > 0 ? 'pos' : r.R.mean < 0 ? 'neg' : '') + '">' + f1(r.R.mean) + '</td><td>' + ft(r.R.t) + '</td><td>' + f1(r.Rrand.mean) +
       '</td><td>' + f1(r.Rx.mean) + '</td><td>' + ft(r.Rx.t) + '</td><td>' + f1(r.exc.mean, 1) + '</td><td>' + ft(r.exc.t) + '</td></tr>';
     const bx = s.all.Rx;
-    html += '<h3>按止盈止损计算</h3><p>' + stopText + '，从入场成交价算起，最长持有 60 分钟，同一根 K 线里两边都碰到时按止损算；R 已扣除点差和滑点。“随机方向 R”是同一时刻做多和做空的平均结果，超额 R 是你选的方向比它多出来的部分。最后两列与止盈止损的设定无关：60 分钟内的最大有利波动减去最大不利波动，同样与随机方向比较。</p>';
-    html += '<div class="tablewrap"><table><thead><tr><th>分组</th><th>笔数</th><th>先到止盈</th><th>先到止损</th><th>平均 R</th><th>R 的 t</th><th>随机方向 R</th><th>超额 R</th><th>超额 t</th><th>有利减不利（pip）</th><th>t</th></tr></thead><tbody>' +
-      brow('全部方向题', s.all) + brow('做多', s.long) + brow('做空', s.short) + brow('把握 3', s.c3) + brow('把握 2', s.c2) + brow('把握 1', s.c1) + '</tbody></table></div>';
-    if (bx.n) html += '<p class="summary">' + (bx.n < 100 ? '方向题不到 100 道，先看个大概：' : '') + '按止盈止损计算，你选的方向比随机方向平均' + (bx.mean >= 0 ? '多 ' : '少 ') + Math.abs(bx.mean).toFixed(2) + ' R（t = ' + ft(bx.t) + '）。</p>';
-    html += '<h3>对照</h3><p>随机方向在同一批时刻的期望毛收益为 0，扣成本后约为 ' + (isNaN(s.avgCost) ? '–' : '−' + s.avgCost.toFixed(2)) + ' pip。急涨急跌题还会给出两条机械规则：每次都反向，和每次都顺势。你的判断至少要好过这两条，才说明“挑选”本身有价值。</p>';
-    html += '<div class="tablewrap"><table><thead><tr><th>规则</th><th>笔数</th><th>净收益</th><th>净 t</th><th>净胜率</th></tr></thead><tbody>' +
-      ctrl('急涨急跌后每次都反向', s.fade) + ctrl('急涨急跌后每次都顺势', s.follow) + '</tbody></table></div>';
-    html += '<p style="margin-top:16px">不做的题：' + s.skips + ' 道。随机基准每种抽题方式各取 3,000 个时刻估算。</p>';
+    html += '<h3>' + tr('byStops') + '</h3><p>' + tr('stopsExplain', { stop: stopText }) + '</p>';
+    html += '<div class="tablewrap"><table><thead><tr>' +
+      th(['thGroup', 'thN', 'thTpFirst', 'thSlFirst', 'thHold', 'thAvgR', 'thRt', 'thRandR', 'thExR', 'thExRt', 'thMfeMae', 'thT']) + '</tr></thead><tbody>' + groups(brow) + '</tbody></table></div>';
+    if (bx.n) html += '<p class="summary">' + tr('rSummary', { few: bx.n < 100 ? tr('rFew') : '', more: tr(bx.mean >= 0 ? 'more' : 'less'), v: Math.abs(bx.mean).toFixed(2), t: ft(bx.t) }) + '</p>';
+    html += '<h3>' + tr('controls') + '</h3><p>' + tr('controlsText', { c: isNaN(s.avgCost) ? '–' : '−' + s.avgCost.toFixed(2) }) + '</p>';
+    html += '<div class="tablewrap"><table><thead><tr>' + th(['thRule', 'thN', 'thNet', 'thNetT', 'thNetWin']) + '</tr></thead><tbody>' +
+      ctrl(tr('fadeRule'), s.fade) + ctrl(tr('followRule'), s.follow) + '</tbody></table></div>';
+    html += '<p style="margin-top:16px">' + tr('skipsLine', { n: s.skips }) + '</p>';
     el.innerHTML = html;
     $$('#hSeg button').forEach((b) => b.addEventListener('click', () => { state.horizon = +b.dataset.h; renderStats(); }));
     $('#btnExport').addEventListener('click', exportCsv);
@@ -2271,7 +2660,7 @@ window.BlindCore = (() => {
     const D = state.D, pip = pipSize(), point = pointSize(), slip = +S.slip || 0;
     const head = ['id', 'server_time', 'bar_index', 'decision', 'confidence', 'decision_seconds', 'timeframe', 'indicators', 'sampling', 'context',
       'close_bid', 'spread_points', 'long_gross15', 'long_gross30', 'long_gross60', 'net15', 'net30', 'net60', 'note', 'drawings',
-      'tp_pips', 'sl_pips', 'exit', 'r_multiple', 'mfe_pips', 'mae_pips'];
+      'tp_pips', 'sl_pips', 'exit', 'r_multiple', 'mfe_pips', 'mae_pips', 'hold_minutes'];
     const lines = [head.join(',')];
     state.labels.forEach((l) => {
       const ok = l.t + 1 + HMAX < D.n;
@@ -2279,26 +2668,26 @@ window.BlindCore = (() => {
       const net = HS.map((h, j) => (ok && l.dir !== 0 ? l.dir * lg[j] - C.costPips(D, l.t, h, pip, point, slip) : NaN));
       const fx = (v) => (isNaN(v) ? '' : v.toFixed(2));
       const st = stopsPips(l.t), tpv = st.tp, slv = st.sl;
-      const b = ok && l.dir !== 0 ? C.barrier(D, l.t, l.dir, tpv, slv, pip, point, slip) : null;
+      const b = ok && l.dir !== 0 ? barrierFor(l.t, l.dir) : null;
       const drawings = (l.draw || []).map((d) => ({ type: d.type, p1: { time: ymdhm(d.p1.time), price: +d.p1.price.toFixed(6) }, p2: d.p2 ? { time: ymdhm(d.p2.time), price: +d.p2.price.toFixed(6) } : null }));
       lines.push([
         l.id, ymdhm(l.time), l.t, l.dir === 1 ? 'long' : l.dir === -1 ? 'short' : 'none', l.conf, (l.ms / 1000).toFixed(1), 'M' + l.tf, l.ind,
         JSON.parse(l.cfg).mode, l.ctx === 1 ? 'spike_up' : l.ctx === -1 ? 'spike_down' : '',
         D.close[l.t], D.spread[l.t], fx(lg[0]), fx(lg[1]), fx(lg[2]), fx(net[0]), fx(net[1]), fx(net[2]), l.note || '', JSON.stringify(drawings),
-        tpv.toFixed(2), slv.toFixed(2), b ? b.how : '', b ? b.r.toFixed(3) : '', b ? b.mfe.toFixed(2) : '', b ? b.mae.toFixed(2) : ''
+        tpv.toFixed(2), slv.toFixed(2), b ? b.how : '', b ? b.r.toFixed(3) : '', b ? b.mfe.toFixed(2) : '', b ? b.mae.toFixed(2) : '', b ? Math.round(b.mins) : ''
       ].map(csvCell).join(','));
     });
     return lines.join('\n') + '\n';
   }
   async function exportCsv() {
-    if (!state.labels.length) { toast('还没有记录可以导出'); return; }
+    if (!state.labels.length) { toast(tr('noExport')); return; }
     const csv = buildCsv();
     const fname = 'blind_labels_' + (state.name || 'data').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') + '.csv';
     if (state.downloads) {
-      try { await state.downloads.save({ filename: fname, data: csv }); toast('已保存 ' + fname); return; }
+      try { await state.downloads.save({ filename: fname, data: csv }); toast(tr('savedFile', { f: fname })); return; }
       catch (err) {
         if (err && err.code === 'declined') return;
-        if (err && err.code === 'rate_limited') { toast('保存窗口已经打开，请先处理它'); return; }
+        if (err && err.code === 'rate_limited') { toast(tr('saveOpen')); return; }
       }
     }
     $('#exportText').value = csv;
@@ -2313,9 +2702,10 @@ window.BlindCore = (() => {
     $('#sTp').value = S.tp; $('#sSl').value = S.sl;
     $('#sStopMode').value = S.stopMode; $('#sAtrTf').value = String(S.atrTf); $('#sTpMult').value = S.tpMult; $('#sSlMult').value = S.slMult;
     $('#sVisible').value = S.visible; $('#sShowTime').value = S.showTime ? '1' : '0'; $('#sReveal').value = S.reveal ? '1' : '0';
+    $('#sLang').value = S.lang === 'zh' || S.lang === 'en' ? S.lang : 'auto'; $('#sAtrP').value = atrPeriod();
     if (state.meta) {
-      $('#sPip').placeholder = '自动（' + state.meta.pip + '）';
-      $('#sPoint').placeholder = '自动（' + state.meta.point + '）';
+      $('#sPip').placeholder = tr('autoVal', { v: state.meta.pip });
+      $('#sPoint').placeholder = tr('autoVal', { v: state.meta.point });
     }
     $('#settingsDlg').returnValue = '';
     $('#settingsDlg').showModal();
@@ -2338,12 +2728,45 @@ window.BlindCore = (() => {
     S.visible = clampCount(parseInt($('#sVisible').value, 10) || 150);
     S.showTime = $('#sShowTime').value === '1';
     S.reveal = $('#sReveal').value === '1';
+    S.atrP = Math.max(2, Math.min(200, parseInt($('#sAtrP').value, 10) || 14));
+    S.lang = ['zh', 'en'].includes($('#sLang').value) ? $('#sLang').value : 'auto';
     store.set('blindlab:settings', S);
-    state.baseCache.clear();
-    if (!state.D) return;
-    if (samplingKey() !== before && state.phase === 'quiz') nextQuestion();
-    else { if (state.phase === 'revealed' && state.revealRec) renderResult(state.revealRec); draw(); }
+    state.baseCache.clear(); barrierCache.clear();
+    const langBefore = lang;
+    lang = resolveLang();
+    if (state.D) {
+      if (samplingKey() !== before && state.phase === 'quiz') nextQuestion();
+      else if (state.phase === 'revealed' && state.revealRec) { rebuild(); fitRevealView(); renderResult(state.revealRec); }
+      else if (state.q) rebuild();
+    }
+    if (lang !== langBefore) applyLang();
+    else { draw(); if (!$('#statsView').hidden) renderStats(); }
+  });
+
+  /* ---------- language switching ---------- */
+  function translateDom() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    document.title = tr('brand');
+    $$('[data-i18n]').forEach((el) => { el.textContent = tr(el.dataset.i18n); });
+    $$('[data-i18n-title]').forEach((el) => { el.title = tr(el.dataset.i18nTitle); });
+    $$('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', tr(el.dataset.i18nAria)); });
+    $$('[data-i18n-ph]').forEach((el) => { el.placeholder = tr(el.dataset.i18nPh); });
+    $('#btnLang').lang = lang === 'zh' ? 'en' : 'zh-CN';
+  }
+  function applyLang() {
+    translateDom();
+    renderChips();
+    if (state.D) { $('#datasetName').textContent = datasetDesc(); updateProgress(); }
+    if (state.phase === 'revealed' && state.revealRec) renderResult(state.revealRec);
     if (!$('#statsView').hidden) renderStats();
+    if (!$('#setupView').hidden) renderSaved();
+    draw();
+  }
+  $('#btnLang').addEventListener('click', () => {
+    lang = lang === 'zh' ? 'en' : 'zh';
+    S.lang = lang;
+    store.set('blindlab:settings', S);
+    applyLang();
   });
 
   /* ---------- top bar & setup wiring ---------- */
@@ -2360,7 +2783,7 @@ window.BlindCore = (() => {
   $('#fileInput').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
   $('#btnDemo').addEventListener('click', () => {
     const D = C.demoData(120);
-    attachData(D, '模拟数据', 'demo');
+    attachData(D, tr('demoName'), 'demo');
   });
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
@@ -2382,6 +2805,7 @@ window.BlindCore = (() => {
     window.claude.use('downloads').then((d) => { state.downloads = d || null; }).catch(() => { state.downloads = null; });
   }
 
+  translateDom();
   show('setup');
 })();
 </script>
